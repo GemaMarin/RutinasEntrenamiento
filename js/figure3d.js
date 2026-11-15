@@ -27,6 +27,7 @@
     hipL: [0, 0, 0], hipR: [0, 0, 0], kneeL: 0, kneeR: 0, ankleL: 0, ankleR: 0,
     shL: [0, 8, 0, 0], shR: [0, 8, 0, 0], elL: 6, elR: 6, wrL: 0, wrR: 0,
     shPL: [0, 0], shPR: [0, 0], // encoger hombros [arriba, adelante]
+    wHL: 1, wHR: 1, wFL: 1, wFR: 1, // apoyo de manos / pies (cuando el ejercicio los fija)
   };
   const KEYS = Object.keys(NEUTRAL);
 
@@ -83,12 +84,14 @@
     root.add(pel);
     marker(root, 0, -0.05, 0, "pelvis", body, 0.1);
     marker(root, 0, -0.03, -0.08, "butt", body, 0.06);
+    marker(root, 0, 0.02, -0.1, "sacrum", body, 0.04);
 
     // columna y tronco
     const spine = joint(root, 0, 0.04, 0, "spine", body);
     const abd = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 14), mat(COL.shirt));
     abd.scale.set(0.135, 0.13, 0.095); abd.position.y = 0.1;
     spine.add(abd);
+    marker(spine, 0, 0.12, -0.1, "lowback", body, 0.04);
     const chest = joint(spine, 0, B.spine, 0, "chest", body);
     const torso = new THREE.Mesh(new THREE.SphereGeometry(1, 22, 16), mat(COL.shirt));
     torso.scale.set(0.175, 0.17, 0.11); torso.position.y = 0.11;
@@ -218,7 +221,8 @@
       root.position.y += (anim.seatH || 0.46) - y;
       root.updateMatrixWorld(true);
       return;
-    } else pts = body.pts;
+    } else if (Array.isArray(g)) pts = body.pts.filter((q) => g.includes(q.name));
+    else pts = body.pts;
     let min = Infinity;
     pts.forEach((q) => { const y = q.o.getWorldPosition(tmpV).y - q.r; if (y < min) min = y; });
     root.position.y += (anim.floorY || 0) - min;
@@ -257,6 +261,60 @@
     const flex = Math.acos(Math.min(1, Math.max(-1, d1.dot(d2))));
     el.rotation.set(-flex, 0, 0);
     sh.updateMatrixWorld(true);
+  }
+
+  /* ---------- Cinemática inversa de piernas (pies plantados) ---------- */
+  const UPV = new THREE.Vector3(0, 1, 0);
+  function solveLeg(body, side, target, pole) {
+    const hip = body.j["hip" + side], kn = body.j["knee" + side];
+    const H = hip.getWorldPosition(new THREE.Vector3());
+    const a = B.thigh, b = B.shin;
+    const st = new THREE.Vector3().subVectors(target, H);
+    const dist = Math.min(Math.max(st.length(), 0.08), a + b - 0.002);
+    const u = st.normalize();
+    const A = Math.acos(Math.min(1, Math.max(-1, (a * a + dist * dist - b * b) / (2 * a * dist))));
+    const pl = new THREE.Vector3(...pole);
+    if (side === "R") pl.x = -pl.x;
+    const perp = pl.sub(u.clone().multiplyScalar(pl.dot(u)));
+    if (perp.lengthSq() < 1e-6) perp.set(0, 0, 1);
+    perp.normalize();
+    const d1 = u.clone().multiplyScalar(Math.cos(A)).addScaledVector(perp, Math.sin(A)).normalize();
+    const E = H.clone().addScaledVector(d1, a);
+    const d2 = new THREE.Vector3().subVectors(H.clone().addScaledVector(u, dist), E).normalize();
+    const Y = d1.clone().negate();
+    let Z = d2.clone().sub(d1.clone().multiplyScalar(d2.dot(d1))).negate(); // la rodilla dobla hacia -Z local
+    if (Z.lengthSq() < 1e-6) Z = perp.clone();
+    Z.normalize();
+    const X = new THREE.Vector3().crossVectors(Y, Z).normalize();
+    _m.makeBasis(X, Y, Z);
+    const qw = new THREE.Quaternion().setFromRotationMatrix(_m);
+    hip.parent.getWorldQuaternion(_q);
+    hip.quaternion.copy(_q.invert().multiply(qw));
+    kn.rotation.set(Math.acos(Math.min(1, Math.max(-1, d1.dot(d2)))), 0, 0);
+    hip.updateMatrixWorld(true);
+  }
+  /* Deja la planta del pie apoyada en horizontal */
+  function flattenFoot(body, side) {
+    const an = body.j["ankle" + side];
+    an.updateMatrixWorld(true);
+    const wq = an.getWorldQuaternion(new THREE.Quaternion());
+    const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(wq); fwd.y = 0;
+    if (fwd.lengthSq() < 1e-6) fwd.set(0, 0, 1);
+    fwd.normalize();
+    const X = new THREE.Vector3().crossVectors(UPV, fwd).normalize();
+    _m.makeBasis(X, UPV, fwd);
+    const qw = new THREE.Quaternion().setFromRotationMatrix(_m);
+    an.parent.getWorldQuaternion(_q);
+    an.quaternion.copy(_q.invert().multiply(qw));
+    an.updateMatrixWorld(true);
+  }
+  /* Aplica un apoyo con peso w: 0 = movimiento libre, 1 = apoyo completo */
+  function blendIK(joints, w, solve) {
+    if (w <= 0.001) return;
+    const fk = joints.map((j) => j.quaternion.clone());
+    solve();
+    if (w < 0.999) joints.forEach((j, i) => j.quaternion.slerpQuaternions(fk[i], j.quaternion.clone(), w));
+    joints[0].updateMatrixWorld(true);
   }
 
   /* ---------- Accesorios ---------- */
@@ -384,6 +442,27 @@
     const ik = anim.ik ? { sides: anim.ik.hands === "L" ? ["L"] : anim.ik.hands === "R" ? ["R"] : ["L", "R"], pole: anim.ik.pole || [0.5, -0.4, -1], t: {} } : null;
     if (ik) ik.sides.forEach((sd) => { ik.t[sd] = hand0[sd].clone(); if (anim.ik.y !== undefined) ik.t[sd].y = anim.ik.y; });
     const handsMid = hand0.L.clone().add(hand0.R).multiplyScalar(0.5);
+    // pies plantados: posición del tobillo en el fotograma indicado, con la planta en el suelo
+    const fk = anim.ikFeet ? { sides: anim.ikFeet.feet === "L" ? ["L"] : anim.ikFeet.feet === "R" ? ["R"] : ["L", "R"], pole: anim.ikFeet.pole || [0.15, 0.4, 1], t: {} } : null;
+    if (fk) {
+      fk.sides.forEach((sd) => {
+        const f = anim.ikFeet.from, fi = typeof f === "object" && f ? (f[sd] ?? seq0) : (f ?? seq0);
+        applyPose(body, frames[fi]); settle(body, anim, null);
+        const v = wp(body.j["ankle" + sd]); const yy = anim.ikFeet.y; const ys = (typeof yy === "object" && yy ? yy[sd] : yy) ?? (B.ankleH + 0.012);
+        if (ys !== "keep") v.y = ys; fk.t[sd] = v;
+        fk.q = fk.q || {}; fk.q[sd] = body.j["ankle" + sd].getWorldQuaternion(new THREE.Quaternion());
+      });
+      applyPose(body, frames[seq0]); settle(body, anim, null);
+    }
+    if (ik && anim.ik.from !== undefined) {
+      applyPose(body, frames[anim.ik.from]); settle(body, anim, null);
+      ik.sides.forEach((sd) => {
+        const f = anim.ik.from, fi = typeof f === "object" ? (f[sd] ?? seq0) : f;
+        applyPose(body, frames[fi]); settle(body, anim, null);
+        ik.t[sd] = wp(body.m["hand" + sd]); if (anim.ik.y !== undefined) ik.t[sd].y = anim.ik.y;
+      });
+      applyPose(body, frames[seq0]); settle(body, anim, null);
+    }
 
     // accesorios
     const bands = [];
@@ -425,7 +504,7 @@
     });
 
     // tiempos: [mover, mantener] por fotograma
-    const moveT = anim.move || 1.1, holdT = anim.hold ?? 0.35;
+    const moveT = anim.move || 1.3, holdT = anim.hold ?? 0.45;
     const seq = anim.seq || frames.map((_, i) => i);
     const cycle = seq.length;
     const segT = moveT + holdT;
@@ -444,10 +523,23 @@
       const k = local < holdT ? 0 : ease(Math.min(1, (local - holdT) / moveT));
       return lerpPose(a, b, k);
     }
+    let curPose = null;
     function update(time) {
-      applyPose(body, poseAt(time));
+      curPose = poseAt(time);
+      // respiración suave: el muñeco nunca está del todo rígido
+      const br = Math.sin((time * 2 * Math.PI) / 3.6);
+      curPose.chest[0] += br * 0.9;
+      curPose.shPL[0] += br * 0.004; curPose.shPR[0] += br * 0.004;
+      curPose.neck[0] -= br * 0.5;
+      applyPose(body, curPose);
       settle(body, anim, null);
-      if (ik) ik.sides.forEach((sd) => solveArm(body, sd, ik.t[sd], ik.pole));
+      if (fk) fk.sides.forEach((sd) => blendIK([body.j["hip" + sd], body.j["knee" + sd]], curPose["wF" + sd], () => {
+        solveLeg(body, sd, fk.t[sd], fk.pole);
+        const fl = anim.ikFeet.flat, fv = typeof fl === "object" && fl ? fl[sd] : fl;
+        if (fv === "keep") { const an = body.j["ankle" + sd]; an.parent.getWorldQuaternion(_q); an.quaternion.copy(_q.invert().multiply(fk.q[sd])); an.updateMatrixWorld(true); }
+        else if (fv !== false) flattenFoot(body, sd);
+      }));
+      if (ik) ik.sides.forEach((sd) => blendIK([body.j["sh" + sd], body.j["el" + sd]], curPose["wH" + sd], () => solveArm(body, sd, ik.t[sd], ik.pole)));
       const pel = body.m.pelvis.getWorldPosition(new THREE.Vector3());
       const s = Math.max(0.6, 1.1 - pel.y * 0.2);
       shadow.position.set(pel.x, 0.002, pel.z); shadow.scale.set(s * 1.1, s * (anim.lying ? 2 : 1.1), 1);
@@ -516,6 +608,8 @@
       setSpeed(v) { speed = v; },
       container,
       renderAt(time) { update(time); renderer.render(scene, camera); },
+      probe(time) { update(time); const o = {}; Object.entries(body.m).forEach(([k, mk]) => { const q = body.pts.find((x) => x.o === mk); const v = wp(mk); o[k] = [v.x, v.y - (q ? q.r : 0), v.z]; }); return o; },
+      cycle: () => cycle * segT,
     };
     active.push(inst);
     return inst;

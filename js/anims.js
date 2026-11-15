@@ -40,11 +40,16 @@
   const ARMS_FLOOR = { shL: [0, 18, 0], shR: [0, 18, 0], elL: 0, elR: 0 };
   const LYING = { ground: "all", anchor: "pelvis", lying: true, cam: 70, pitch: 22 };
   const PRONE = { rot: [90, 0, 0] };
-  const FOUR = { rot: [90, 0, 0], hipL: [90, 2, 0], hipR: [90, 2, 0], kneeL: 90, kneeR: 90, ankleL: 45, ankleR: 45,
-    shL: [90, 2, 0], shR: [90, 2, 0], elL: 0, elR: 0, neck: [-25, 0, 0] };
+  const FOUR = { rot: [72, 0, 0], hipL: [72, 2, 0], hipR: [72, 2, 0], kneeL: 90, kneeR: 90, ankleL: 45, ankleR: 45,
+    shL: [72, 2, 0], shR: [72, 2, 0], elL: 0, elR: 0, neck: [-10, 0, 0] };
   const SIDE = { rot: [0, 0, 90] };
   const BENT_OVER = { rot: [50, 0, 0], hipL: [62, 6, 0], hipR: [62, 6, 0], kneeL: 22, kneeR: 22, ankleL: -10, ankleR: -10, neck: [-25, 0, 0] };
   const MAT = (rot = 0, len) => ({ type: "mat", rot, len });
+  // Apoyos: qué partes tocan el suelo en cada postura
+  const SUP_GROUND = ["back", "sacrum", "head", "shoulderL", "shoulderR"];   // tumbada boca arriba
+  const FEET_FLOOR = { pole: [0.1, 1, 0.3] };                              // pies plantados (rodillas hacia arriba)
+  const KNEES_GROUND = ["kneeL", "kneeR"];                                  // de rodillas
+  const HANDS_FLOOR = { hands: "both", y: 0.045, pole: [0.2, 0, -1], from: 0 }; // manos en el suelo
   const DB = { type: "dumbbells" };
   const ON_BAND = { type: "band", links: [["handL", "footL"], ["handR", "footR"]] };
 
@@ -81,18 +86,22 @@
       ],
     },
     "split-squat": {
-      cam: 80,
+      cam: 80, ground: ["heelL", "toeL", "toeR"], anchor: "feet",
+      ikFeet: { flat: { L: true, R: "keep" }, y: { R: "keep" }, pole: [0.1, 0.2, 1] },
       frames: [
-        { hipL: [26, 4, 0], hipR: [-16, 4, 0], kneeL: 4, kneeR: 6, ankleL: 0, ankleR: 12, shL: [0, 20, 0], shR: [0, 20, 0] },
-        { hipL: [74, 4, 0], hipR: [-4, 4, 0], kneeL: 88, kneeR: 94, ankleL: -14, ankleR: 40, shL: [0, 20, 0], shR: [0, 20, 0] },
+        { hipL: [20, 4, 0], hipR: [-14, 4, 0], kneeL: 8, kneeR: 34, ankleL: -2, ankleR: 34, shL: [0, 20, 0], shR: [0, 20, 0] },
+        { hipL: [70, 4, 0], hipR: [-6, 4, 0], kneeL: 86, kneeR: 92, ankleL: -14, ankleR: 46, shL: [0, 20, 0], shR: [0, 20, 0] },
       ],
+      move: 1.2, hold: 0.4,
     },
     "glute-bridge": {
-      ...LYING, anchor: "feet", props: [MAT()],
+      ...LYING, anchor: "feet", ground: ["shoulderL", "shoulderR", "head"], props: [MAT()], ikFeet: FEET_FLOOR,
       frames: [
         P(SUPINE, KNEES_BENT, ARMS_FLOOR),
-        P({ rot: [-117, 0, 0], hipL: [8, 4, 0], hipR: [8, 4, 0], kneeL: 100, kneeR: 100, ankleL: 50, ankleR: 50 }, { shL: [-26, 18, 0], shR: [-26, 18, 0], elL: 0, elR: 0 }),
+        P({ rot: [-124, 0, 0], hipL: [0, 4, 0], hipR: [0, 4, 0], kneeL: 100, kneeR: 100, neck: [32, 0, 0] },
+          { shL: [-34, 18, 0], shR: [-34, 18, 0], elL: 0, elR: 0 }),
       ],
+      move: 1.2, hold: 0.7,
     },
     "calf-raise": {
       props: [CHAIR_FRONT], ik: IK_CHAIR, cam: 75,
@@ -122,23 +131,24 @@
       ],
     },
     "side-leg-raise": {
-      ...LYING, cam: 5, pitch: 25, props: [MAT(90)],
+      ...LYING, ground: ["shoulderR", "pelvis", "kneeR"], cam: 5, pitch: 25, props: [MAT(90)],
       frames: [
-        P(SIDE, { hipR: [25, 0, 0], kneeR: 50, hipL: [0, 0, 0], shR: [175, 0, 0], elR: 70, shL: [60, 0, 0], elL: 30, neck: [0, 8, 0] }),
-        P(SIDE, { hipR: [25, 0, 0], kneeR: 50, hipL: [0, 36, 0], shR: [175, 0, 0], elR: 70, shL: [60, 0, 0], elL: 30, neck: [0, 8, 0] }),
+        P(SIDE, { spine: [0, -12, 0], hipR: [25, 0, 0], kneeR: 50, hipL: [0, 0, 0], shR: [175, 0, 0], elR: 70, shL: [60, 0, 0], elL: 30, neck: [0, 14, 0] }),
+        P(SIDE, { spine: [0, -12, 0], hipR: [25, 0, 0], kneeR: 50, hipL: [0, 36, 0], shR: [175, 0, 0], elR: 70, shL: [60, 0, 0], elL: 30, neck: [0, 14, 0] }),
       ],
     },
     "clamshell": {
-      ...LYING, cam: 5, pitch: 25, props: [MAT(90), { type: "band", links: [["kneeL", "kneeR"]] }],
+      ...LYING, ground: ["shoulderR", "pelvis", "kneeR"], cam: 5, pitch: 25, props: [MAT(90), { type: "band", links: [["kneeL", "kneeR"]] }],
       frames: [
-        P(SIDE, { hipR: [50, 0, 0], kneeR: 90, hipL: [50, 0, 0], kneeL: 90, shR: [175, 0, 0], elR: 70, shL: [60, 0, 0], elL: 30, neck: [0, 8, 0] }),
-        P(SIDE, { hipR: [50, 0, 0], kneeR: 90, hipL: [50, 30, -38], kneeL: 90, shR: [175, 0, 0], elR: 70, shL: [60, 0, 0], elL: 30, neck: [0, 8, 0] }),
+        P(SIDE, { spine: [0, -12, 0], hipR: [50, 0, 0], kneeR: 90, hipL: [50, 0, 0], kneeL: 90, shR: [175, 0, 0], elR: 70, shL: [60, 0, 0], elL: 30, neck: [0, 14, 0] }),
+        P(SIDE, { spine: [0, -12, 0], hipR: [50, 0, 0], kneeR: 90, hipL: [50, 30, -38], kneeL: 90, shR: [175, 0, 0], elR: 70, shL: [60, 0, 0], elL: 30, neck: [0, 14, 0] }),
       ],
     },
 
     /* ================= ESPALDA ================= */
     "band-row": {
-      ground: "all", anchor: "pelvis", cam: 80, props: [MAT(), { type: "band", links: [["handL", "toeL"], ["handR", "toeR"]] }],
+      ground: ["butt"], anchor: "pelvis", cam: 80, props: [MAT(), { type: "band", links: [["handL", "toeL"], ["handR", "toeR"]] }],
+      ikFeet: { flat: false, y: 0.072, pole: [0.1, 1, 0.2] },
       frames: [
         { hipL: [88, 4, 0], hipR: [88, 4, 0], kneeL: 4, kneeR: 4, ankleL: -10, ankleR: -10, spine: [8, 0, 0], shL: [72, 6, 0], shR: [72, 6, 0], elL: 0, elR: 0 },
         { hipL: [88, 4, 0], hipR: [88, 4, 0], kneeL: 4, kneeR: 4, ankleL: -10, ankleR: -10, spine: [-2, 0, 0], shL: [-18, 10, 0], shR: [-18, 10, 0], elL: 105, elR: 105, shPL: [0, -0.02], shPR: [0, -0.02] },
@@ -166,10 +176,10 @@
       ],
     },
     "prone-extension": {
-      ...LYING, cam: 80, props: [MAT()],
+      ...LYING, ground: ["pelvis", "front", "kneeL", "kneeR"], cam: 80, props: [MAT()],
       frames: [
-        P(PRONE, { shL: [0, 14, 0], shR: [0, 14, 0], elL: 0, elR: 0, ankleL: 60, ankleR: 60 }),
-        P(PRONE, { spine: [-14, 0, 0], chest: [-12, 0, 0], neck: [-8, 0, 0], shL: [-12, 16, 0], shR: [-12, 16, 0], elL: 0, elR: 0, ankleL: 60, ankleR: 60 }),
+        P(PRONE, { hipL: [4, 6, 0], hipR: [4, 6, 0], shL: [0, 14, 0], shR: [0, 14, 0], elL: 0, elR: 0, ankleL: 72, ankleR: 72, neck: [4, 0, 0] }),
+        P(PRONE, { hipL: [4, 6, 0], hipR: [4, 6, 0], spine: [-14, 0, 0], chest: [-12, 0, 0], neck: [-8, 0, 0], shL: [-12, 16, 0], shR: [-12, 16, 0], elL: 0, elR: 0, ankleL: 72, ankleR: 72 }),
       ],
     },
     "band-pulldown": {
@@ -204,21 +214,22 @@
       ],
     },
     "knee-pushup": {
-      ...LYING, anchor: "knees", cam: 75, ik: { hands: "both", pole: [0.8, 0.2, -0.6] }, props: [MAT()],
+      ...LYING, anchor: "knees", ground: KNEES_GROUND, cam: 75, ik: { ...HANDS_FLOOR, pole: [0.8, 0.2, -0.6] }, props: [MAT()],
       frames: [
-        { rot: [70, 0, 0], hipL: [0, 4, 0], hipR: [0, 4, 0], kneeL: 100, kneeR: 100, ankleL: 40, ankleR: 40, shL: [70, 12, 0], shR: [70, 12, 0], elL: 0, elR: 0, neck: [-15, 0, 0] },
-        { rot: [84, 0, 0], hipL: [0, 4, 0], hipR: [0, 4, 0], kneeL: 100, kneeR: 100, ankleL: 40, ankleR: 40, neck: [-15, 0, 0] },
+        { rot: [56, 0, 0], hipL: [0, 4, 0], hipR: [0, 4, 0], kneeL: 100, kneeR: 100, ankleL: 40, ankleR: 40, shL: [56, 14, 0], shR: [56, 14, 0], elL: 0, elR: 0, neck: [-15, 0, 0] },
+        { rot: [76, 0, 0], hipL: [0, 4, 0], hipR: [0, 4, 0], kneeL: 100, kneeR: 100, ankleL: 40, ankleR: 40, neck: [-15, 0, 0] },
       ],
+      move: 1.2, hold: 0.4,
     },
     "floor-press": {
-      ...LYING, props: [MAT(), DB],
+      ...LYING, ground: SUP_GROUND, props: [MAT(), DB], ikFeet: FEET_FLOOR,
       frames: [
         P(SUPINE, KNEES_BENT, { shL: [0, 55, 0], shR: [0, 55, 0], elL: 90, elR: 90 }),
         P(SUPINE, KNEES_BENT, { shL: [90, 4, 0], shR: [90, 4, 0], elL: 0, elR: 0 }),
       ],
     },
     "floor-fly": {
-      ...LYING, cam: 40, pitch: 35, props: [MAT(), { type: "dumbbells", grip: "neutral" }],
+      ...LYING, ground: SUP_GROUND, cam: 40, pitch: 35, props: [MAT(), { type: "dumbbells", grip: "neutral" }], ikFeet: FEET_FLOOR,
       frames: [
         P(SUPINE, KNEES_BENT, { shL: [90, 0, 0, 72], shR: [90, 0, 0, 72], elL: 18, elR: 18 }),
         P(SUPINE, KNEES_BENT, { shL: [90, 0, 0, 6], shR: [90, 0, 0, 6], elL: 12, elR: 12 }),
@@ -322,7 +333,7 @@
       ],
     },
     "close-press": {
-      ...LYING, props: [MAT(), { type: "dumbbells", grip: "neutral" }],
+      ...LYING, ground: SUP_GROUND, props: [MAT(), { type: "dumbbells", grip: "neutral" }], ikFeet: FEET_FLOOR,
       frames: [
         P(SUPINE, KNEES_BENT, { shL: [10, 12, -80], shR: [10, 12, -80], elL: 120, elR: 120 }),
         P(SUPINE, KNEES_BENT, { shL: [90, 0, -80], shR: [90, 0, -80], elL: 0, elR: 0 }),
@@ -331,13 +342,13 @@
 
     /* ================= ABDOMEN Y CORE ================= */
     "bird-dog": {
-      ...LYING, anchor: "knees", cam: 70, props: [MAT()],
+      ...LYING, anchor: "pelvis", ground: KNEES_GROUND, cam: 70, ik: HANDS_FLOOR, props: [MAT()],
       frames: [
         P(FOUR),
-        P(FOUR, { shL: [178, 4, 0], hipR: [0, 2, 0], kneeR: 4, ankleR: 30 }),
-        P(FOUR, { shR: [178, 4, 0], hipL: [0, 2, 0], kneeL: 4, ankleL: 30 }),
+        P(FOUR, { shL: [178, 4, 0], hipR: [0, 2, 0], kneeR: 4, ankleR: 30, wHL: 0 }),
+        P(FOUR, { shR: [178, 4, 0], hipL: [0, 2, 0], kneeL: 4, ankleL: 30, wHR: 0 }),
       ],
-      seq: [0, 1, 0, 2], hold: 0.7,
+      seq: [0, 1, 0, 2], move: 1.2, hold: 0.8,
     },
     "dead-bug": {
       ...LYING, cam: 60, props: [MAT()],
@@ -357,26 +368,29 @@
       move: 1.6, hold: 0.2,
     },
     "knee-plank": {
-      ...LYING, anchor: "knees", cam: 80, props: [MAT()],
+      ...LYING, anchor: "knees", ground: ["kneeL", "kneeR", "elbowL", "elbowR"], cam: 80, props: [MAT()],
       frames: [
-        { rot: [80, 0, 0], hipL: [0, 4, 0], hipR: [0, 4, 0], kneeL: 95, kneeR: 95, ankleL: 40, ankleR: 40, shL: [80, 10, 0], shR: [80, 10, 0], elL: 90, elR: 90, neck: [-12, 0, 0] },
-        { rot: [81, 0, 0], hipL: [0, 4, 0], hipR: [0, 4, 0], kneeL: 95, kneeR: 95, ankleL: 40, ankleR: 40, shL: [81, 10, 0], shR: [81, 10, 0], elL: 91, elR: 91, neck: [-12, 0, 0], chest: [1, 0, 0] },
+        { rot: [73, 0, 0], hipL: [0, 4, 0], hipR: [0, 4, 0], kneeL: 95, kneeR: 95, ankleL: 40, ankleR: 40, shL: [73, 10, 0], shR: [73, 10, 0], elL: 90, elR: 90, neck: [-12, 0, 0] },
+        { rot: [72, 0, 0], hipL: [0, 4, 0], hipR: [0, 4, 0], kneeL: 95, kneeR: 95, ankleL: 40, ankleR: 40, shL: [72, 10, 0], shR: [72, 10, 0], elL: 90, elR: 90, neck: [-12, 0, 0], chest: [1, 0, 0] },
       ],
       move: 1.6, hold: 0.2,
     },
     "crunch": {
-      ...LYING, props: [MAT()],
+      ...LYING, ground: ["sacrum", "lowback"], props: [MAT()], ikFeet: FEET_FLOOR,
       frames: [
         P(SUPINE, KNEES_BENT, { shL: [20, 6, 0], shR: [20, 6, 0], elL: 0, elR: 0 }),
         P(SUPINE, KNEES_BENT, { spine: [20, 0, 0], chest: [14, 0, 0], neck: [12, 0, 0], shL: [50, 6, 0], shR: [50, 6, 0], elL: 0, elR: 0 }),
       ],
+      move: 1.0, hold: 0.5,
     },
     "side-plank-knees": {
-      ground: "all", anchor: "knees", lying: true, cam: 2, pitch: 15, props: [MAT(90)],
+      ground: ["elbowR", "kneeR", "pelvis"], anchor: "knees", lying: true, cam: 2, pitch: 15, props: [MAT(90)],
+      ik: { hands: "R", y: 0.045, pole: [0, -1, 0], from: 0 },
       frames: [
-        P({ rot: [0, 0, 80], hipL: [-5, 0, 0], hipR: [-5, 0, 0], kneeL: 95, kneeR: 95, shR: [0, 80, 0], elR: 90, shL: [0, 4, 0], elL: 6 }),
-        P({ rot: [0, 0, 66], hipL: [-5, 0, 0], hipR: [-5, 0, 0], kneeL: 95, kneeR: 95, shR: [0, 66, 0], elR: 90, shL: [0, 4, 0], elL: 6 }),
+        P({ rot: [0, 0, 88], spine: [0, -40, 0], hipL: [-5, 0, 0], hipR: [-5, 0, 0], kneeL: 95, kneeR: 95, shR: [0, 70, 0], elR: 90, shL: [0, 4, 0], elL: 6 }),
+        P({ rot: [0, 0, 68], hipL: [-5, 0, 0], hipR: [-5, 0, 0], kneeL: 95, kneeR: 95, shR: [0, 66, 0], elR: 90, shL: [0, 4, 0], elL: 6 }),
       ],
+      move: 1.2, hold: 0.6,
     },
     "seated-march": {
       ...SEAT_OPTS, cam: 65,
@@ -388,11 +402,12 @@
       seq: [0, 1, 0, 2], move: 0.7, hold: 0.2,
     },
     "heel-taps": {
-      ...LYING, cam: 70, props: [MAT()],
+      ...LYING, ground: ["back", "sacrum"], cam: 70, props: [MAT()],
+      ikFeet: { pole: [0.1, 1, 0.3], from: { L: 1, R: 2 } },
       frames: [
-        P(SUPINE, ARMS_FLOOR, { hipL: [90, 6, 0], hipR: [90, 6, 0], kneeL: 90, kneeR: 90, ankleL: 10, ankleR: 10 }),
-        P(SUPINE, ARMS_FLOOR, { hipL: [40, 6, 0], hipR: [90, 6, 0], kneeL: 92, kneeR: 90, ankleL: 30, ankleR: 10 }),
-        P(SUPINE, ARMS_FLOOR, { hipL: [90, 6, 0], hipR: [40, 6, 0], kneeL: 90, kneeR: 92, ankleL: 10, ankleR: 30 }),
+        P(SUPINE, ARMS_FLOOR, { hipL: [90, 6, 0], hipR: [90, 6, 0], kneeL: 90, kneeR: 90, ankleL: 10, ankleR: 10, wFL: 0, wFR: 0 }),
+        P(SUPINE, ARMS_FLOOR, { hipL: [40, 6, 0], hipR: [90, 6, 0], kneeL: 92, kneeR: 90, ankleL: 30, ankleR: 10, wFL: 1, wFR: 0 }),
+        P(SUPINE, ARMS_FLOOR, { hipL: [90, 6, 0], hipR: [40, 6, 0], kneeL: 90, kneeR: 92, ankleL: 10, ankleR: 30, wFL: 0, wFR: 1 }),
       ],
       seq: [0, 1, 0, 2],
     },
@@ -490,12 +505,12 @@
       seq: [0, 1, 2, 3], move: 0.6, hold: 0,
     },
     "cat-cow": {
-      ...LYING, anchor: "knees", cam: 85, ik: { hands: "both", pole: [0.2, 0, 1] }, props: [MAT()],
+      ...LYING, anchor: "knees", ground: KNEES_GROUND, cam: 85, ik: { ...HANDS_FLOOR, pole: [0.2, 0, 1] }, props: [MAT()],
       frames: [
-        P(FOUR, { rot: [76, 0, 0], hipL: [76, 2, 0], hipR: [76, 2, 0], spine: [16, 0, 0], chest: [12, 0, 0], neck: [30, 0, 0] }),
-        P(FOUR, { rot: [100, 0, 0], hipL: [100, 2, 0], hipR: [100, 2, 0], spine: [-12, 0, 0], chest: [-8, 0, 0], neck: [-38, 0, 0] }),
+        P(FOUR, { rot: [54, 0, 0], hipL: [54, 2, 0], hipR: [54, 2, 0], spine: [18, 0, 0], chest: [14, 0, 0], neck: [30, 0, 0], shL: [86, 2, 0], shR: [86, 2, 0] }),
+        P(FOUR, { rot: [88, 0, 0], hipL: [88, 2, 0], hipR: [88, 2, 0], spine: [-12, 0, 0], chest: [-8, 0, 0], neck: [-38, 0, 0], shL: [68, 2, 0], shR: [68, 2, 0] }),
       ],
-      move: 1.4, hold: 0.5,
+      move: 1.6, hold: 0.6,
     },
     "seated-twist": {
       ...SEAT_OPTS, cam: 15,
@@ -531,12 +546,12 @@
       move: 1.3, hold: 1.2,
     },
     "child-pose": {
-      ...LYING, anchor: "knees", cam: 75, props: [MAT()],
+      ...LYING, anchor: "knees", ground: KNEES_GROUND, cam: 75, props: [MAT()],
       frames: [
         P(FOUR),
-        { rot: [115, 0, 0], hipL: [165, 8, 0], hipR: [165, 8, 0], kneeL: 140, kneeR: 140, ankleL: 70, ankleR: 70, shL: [200, 6, 0], shR: [200, 6, 0], elL: 0, elR: 0, spine: [8, 0, 0], neck: [6, 0, 0] },
+        { rot: [115, 0, 0], hipL: [165, 8, 0], hipR: [165, 8, 0], kneeL: 140, kneeR: 140, ankleL: 82, ankleR: 82, shL: [200, 6, 0], shR: [200, 6, 0], elL: 0, elR: 0, spine: [8, 0, 0], neck: [6, 0, 0] },
       ],
-      move: 1.6, hold: 1.4,
+      move: 1.8, hold: 1.4,
     },
     "neck-stretch": {
       ...SEAT_OPTS, cam: 10,
