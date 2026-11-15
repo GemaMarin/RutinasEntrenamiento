@@ -1,8 +1,9 @@
 /* Service worker: permite usar la app sin conexión.
    Si cambias archivos, sube el número de versión. */
-const CACHE = "mi-gimnasio-v1";
+const CACHE = "mi-gimnasio-v2";
 const ASSETS = [
   "./", "index.html", "css/styles.css", "js/data.js", "js/app.js",
+  "js/anims.js", "js/figure3d.js", "vendor/three.min.js",
   "manifest.webmanifest", "icons/icon.svg", "icons/icon-192.png", "icons/icon-512.png",
 ];
 

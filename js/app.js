@@ -48,7 +48,11 @@
   function load() {
     try {
       const d = JSON.parse(localStorage.getItem(KEY));
-      if (d && typeof d === "object") return { ...JSON.parse(JSON.stringify(DEFAULTS)), ...d, settings: { ...DEFAULTS.settings, ...(d.settings || {}) } };
+      if (d && typeof d === "object") {
+        // quita de las rutinas propias ejercicios que ya no existan
+        (d.custom || []).forEach((c) => { c.items = (c.items || []).filter(([id]) => EX[id]); });
+        return { ...JSON.parse(JSON.stringify(DEFAULTS)), ...d, settings: { ...DEFAULTS.settings, ...(d.settings || {}) } };
+      }
     } catch (e) { /* datos corruptos o almacenamiento bloqueado */ }
     return JSON.parse(JSON.stringify(DEFAULTS));
   }
@@ -101,24 +105,66 @@
     return n;
   }
 
+  /* ---------------- Muñeco 3D (carga bajo demanda) ---------------- */
+  let threeP = null, figSlow = false;
+  function load3D() {
+    if (threeP) return threeP;
+    const add = (src) => new Promise((res, rej) => {
+      const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s);
+    });
+    threeP = add("vendor/three.min.js").then(() => add("js/anims.js")).then(() => add("js/figure3d.js"))
+      .catch((e) => { threeP = null; throw e; });
+    return threeP;
+  }
+  /* Monta el muñeco en los contenedores .fig3d[data-ex] que aún no lo tengan */
+  function mountFigures(root = document) {
+    const els = $$(".fig3d:not([data-mounted])", root);
+    if (!els.length) return;
+    els.forEach((el) => (el.dataset.mounted = "1"));
+    load3D().then(() => {
+      els.forEach((el) => {
+        if (!el.isConnected) return;
+        const inst = window.Figure3D.mount(el, el.dataset.ex, { speed: figSlow ? 0.5 : 1 });
+        if (inst) { el._inst = inst; el.classList.add("ready"); } else el.classList.add("fail");
+      });
+    }).catch(() => els.forEach((el) => el.classList.add("fail")));
+  }
+  const miniSrc = (id) => `img/mini/${id}.webp`;
+  const mini = (id, cls = "mini") => `<img class="${cls}" src="${miniSrc(id)}" alt="" loading="lazy" decoding="async">`;
+  const figBox = (id, cls = "") => `<div class="fig3d ${cls}" data-ex="${esc(id)}">${mini(id, "fig-ph")}</div>`;
+  const catOf = (id) => CATEGORIES.find((c) => c.id === id);
+  const withWarmup = (r) => (r.cat && r.cat !== "movilidad" && db.settings.warmup !== false
+    ? { ...r, items: [...WARMUP, ...r.items], warm: WARMUP.length } : r);
+
   /* ---------------- Plantillas comunes ---------------- */
   function routineCard(r) {
+    const thumbs = r.items.slice(0, 5).map(([id]) => `<span class="th">${mini(id)}</span>`).join("");
     return `<a class="routine-card" href="#/rutina/${esc(r.id)}" style="--c:${esc(r.color || "#C4553A")}">
-      <div class="tile">${esc(r.emoji || "⭐")}</div>
-      <div class="grow">
+      <div class="rc-top"><div class="grow">
         <h3>${esc(r.name)}</h3>
         ${r.desc ? `<p>${esc(r.desc)}</p>` : ""}
-        <div class="meta"><span>⏱ ${estimate(r)} min</span><span>${r.items.length} ejercicios</span><span>${levelDots(routineLevel(r))}</span></div>
-      </div>${CHEV}</a>`;
+        <div class="meta"><span>⏱ ${estimate(withWarmup(r))} min</span><span>${r.items.length} ejercicios</span><span>${levelDots(routineLevel(r))}</span></div>
+      </div>${CHEV}</div>
+      <div class="thumbs">${thumbs}</div></a>`;
   }
   function exItem(ex, { right = "", href = true, num = "" } = {}) {
     const z = ZONES[ex.zone];
     const inner = `${num ? `<span class="num">${num}</span>` : ""}
-      <div class="tile" style="--c:${z.color}">${z.emoji}</div>
+      <div class="tile pic" style="--c:${z.color}">${mini(ex.id)}</div>
       <div class="grow"><h4>${esc(ex.name)}</h4><div class="sub">${right || `${ex.equip.map((e) => EQUIP[e].emoji).join(" ")} ${esc(EQUIP[ex.equip[0]].name)} · ${LEVELS[ex.level]}`}</div></div>`;
     return href
       ? `<a class="ex-item" href="#/ejercicio/${ex.id}">${inner}${CHEV}</a>`
       : `<div class="ex-item">${inner}</div>`;
+  }
+  function viewerBlock(ex) {
+    const hasPhoto = PHOTOS.has(ex.id);
+    return `<div class="viewer">
+      ${hasPhoto ? `<div class="seg viewer-tabs"><button class="on" data-act="vt" data-v="3d">🧍‍♀️ Muñeco 3D</button><button data-act="vt" data-v="foto">📷 Fotos reales</button></div>` : ""}
+      ${figBox(ex.id, "big")}
+      ${hasPhoto ? `<div class="photo-anim" hidden><img src="img/fotos/${ex.id}-0.jpg" alt="Posición inicial"><img class="b" src="img/fotos/${ex.id}-1.jpg" alt="Posición final"></div>` : ""}
+      <div class="viewer-ctrl"><span class="small muted" data-hint>👆 Arrastra para girar el muñeco</span>
+        <button class="btn ghost small" data-act="slow">${figSlow ? "🐇 Velocidad normal" : "🐢 Más despacio"}</button></div>
+    </div>`;
   }
   function videoBlock(ex) {
     const vid = videoOf(ex);
@@ -129,7 +175,7 @@
     const url = "https://www.youtube.com/results?search_query=" + encodeURIComponent(ex.yt || ex.name);
     return `<a class="video-btn" href="${url}" target="_blank" rel="noopener">
         <span class="play"><svg viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></svg></span>
-        <span><strong>Ver vídeos de cómo se hace</strong><span>Se abre YouTube con tutoriales</span></span>
+        <span><strong>Ver vídeos en YouTube</strong><span>Tutoriales de este ejercicio</span></span>
       </a>
       <button class="link-btn small" data-act="set-video" data-id="${ex.id}">¿Te gusta un vídeo concreto? Guárdalo aquí</button>`;
   }
@@ -137,6 +183,11 @@
     return `<ol class="steps">${ex.steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol>
       ${ex.tips?.length ? `<div class="callout tip"><span class="ic">💡</span><div>${ex.tips.length > 1 ? `<ul>${ex.tips.map((t) => `<li>${esc(t)}</li>`).join("")}</ul>` : `<p>${esc(ex.tips[0])}</p>`}</div></div>` : ""}
       ${ex.caution ? `<div class="callout warn"><span class="ic">⚠️</span><p>${esc(ex.caution)}</p></div>` : ""}`;
+  }
+  function weekNumber(d = new Date()) { return Math.floor((weekStart(d) - new Date(2024, 0, 1)) / (7 * 864e5)); }
+  function suggestedRoutine(catId, d = new Date()) {
+    const list = ROUTINES.filter((r) => r.cat === catId && r.level < 3);
+    return list.length ? list[weekNumber(d) % list.length] : null;
   }
 
   /* =========================================================
@@ -149,25 +200,29 @@
     const name = db.settings.name ? `, ${esc(db.settings.name)}` : "";
     const today = dateKey(now);
     const doneToday = sessionsOn(today).length > 0;
-    const planned = getRoutine(WEEK_PLAN[now.getDay()]);
+    const planCat = WEEK_PLAN[now.getDay()];
+    const planned = planCat ? suggestedRoutine(planCat, now) : null;
     const dateStr = now.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
     const dateNice = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
 
     let hero;
     if (doneToday) {
-      hero = `<div class="hero rest"><div class="eyebrow">Hoy</div><h2>¡Entrenamiento hecho! 🎉</h2>
-        <p>Muy bien${name}. Descansa, bebe agua y si te apetece, sal a dar un paseo.</p>
-        <a class="btn white" href="#/rutina/mobility">🧘‍♀️ Unos estiramientos suaves</a></div>`;
+      const relax = suggestedRoutine("movilidad", now);
+      hero = `<div class="hero rest"><div class="eyebrow">Hoy</div><h2>¡Hecho por hoy! 🎉</h2>
+        <p>Muy bien${name}. Descansa, bebe agua y, si te apetece, sal a dar un paseo.</p>
+        <a class="btn white" href="#/rutina/${relax.id}">🧘‍♀️ Unos estiramientos suaves</a></div>`;
     } else if (planned) {
-      hero = `<div class="hero"><div class="eyebrow">Te propongo para hoy</div>
-        <h2>${esc(planned.emoji)} ${esc(planned.name)}</h2>
-        <p>⏱ Unos ${estimate(planned)} minutos · ${planned.items.length} ejercicios</p>
+      const c = catOf(planned.cat);
+      hero = `<div class="hero"><div class="eyebrow">Te propongo para hoy · ${esc(c.name)}</div>
+        <h2>${esc(c.emoji)} ${esc(planned.name)}</h2>
+        <div class="hero-thumbs">${planned.items.map(([id]) => `<span>${mini(id)}</span>`).join("")}</div>
+        <p>⏱ Unos ${estimate(withWarmup(planned))} minutos · ${planned.items.length} ejercicios</p>
         <div class="row"><button class="btn white" data-act="start" data-id="${planned.id}">▶ Empezar ahora</button>
-        <a class="btn soft small" style="background:rgba(255,255,255,.18);color:#fff" href="#/rutina/${planned.id}">Ver</a></div></div>`;
+        <a class="btn soft small" style="background:rgba(255,255,255,.18);color:#fff" href="#/categoria/${c.id}">Otra de ${esc(c.name.toLowerCase())}</a></div></div>`;
     } else {
       hero = `<div class="hero rest"><div class="eyebrow">Hoy toca</div><h2>Descanso activo 🚶‍♀️</h2>
         <p>Un paseo de 30 minutos es perfecto. Cuando vuelvas, apúntalo en tu diario.</p>
-        <button class="btn white" data-act="add-manual">✍️ Apuntar un paseo</button></div>`;
+        <button class="btn white" data-act="add-manual">✍️ Apuntar una actividad</button></div>`;
     }
 
     const ws = weekStart();
@@ -182,14 +237,8 @@
     const pct = Math.min(100, Math.round((nWeek / goal) * 100));
     const goalMsg = nWeek >= goal ? "¡Objetivo cumplido! 🏆" : nWeek === 0 ? "¡Vamos a por la primera!" : `Te ${goal - nWeek === 1 ? "falta 1 sesión" : `faltan ${goal - nWeek} sesiones`}`;
 
-    const quickIds = ["legs", "shoulders-arms", "back-posture", "core", "balance", "mobility"];
-    const quick = quickIds.map(getRoutine).filter(Boolean).map((r) => `
-      <a class="quick" href="#/rutina/${r.id}" style="--c:${r.color}">
-        <span class="em">${r.emoji}</span><strong>${esc(r.name)}</strong><span>⏱ ${estimate(r)} min</span></a>`).join("");
-
     const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 864e5);
     const tip = TIPS[dayOfYear % TIPS.length];
-
     const last = [...db.sessions].sort((a, b) => b.date.localeCompare(a.date))[0];
 
     return {
@@ -204,8 +253,8 @@
           <p class="small muted center" style="margin:12px 0 0">${goalMsg}</p>
         </div>
         <div class="section">
-          <h3 class="section-title">¿Qué te apetece trabajar? <a href="#/rutinas">Ver todas</a></h3>
-          <div class="quick-grid">${quick}</div>
+          <h3 class="section-title">¿Qué te apetece trabajar hoy?</h3>
+          ${categoryGrid()}
         </div>
         <div class="section callout tip"><span class="ic">💡</span><p><strong>Consejo del día:</strong> ${esc(tip)}</p></div>
         ${last ? `<div class="section"><h3 class="section-title">Tu última sesión <a href="#/historial">Diario</a></h3>${logItem(last, false)}</div>` : ""}
@@ -213,20 +262,42 @@
     };
   }
 
+  function categoryGrid() {
+    return `<div class="cat-grid">${CATEGORIES.map((c) => {
+      const n = ROUTINES.filter((r) => r.cat === c.id).length;
+      return `<a class="cat" href="#/categoria/${c.id}" style="--c:${c.color}">
+        <span class="em">${c.emoji}</span><strong>${esc(c.name)}</strong><span>${n} rutinas</span></a>`;
+    }).join("")}</div>`;
+  }
+
   function viewRoutines() {
     const custom = db.custom.length
       ? `<div class="routine-list">${db.custom.map(routineCard).join("")}</div>`
-      : `<div class="card center"><p class="muted" style="margin-top:0">Aún no has creado ninguna rutina propia.</p></div>`;
+      : `<div class="card center"><p class="muted" style="margin:0">Aún no has creado ninguna rutina propia.</p></div>`;
     return {
       title: "Rutinas",
       html: `
-        <p class="muted" style="margin-top:4px">Elige una rutina y pulsa <strong>Empezar</strong>. La app te guía paso a paso.</p>
-        <div class="section" style="margin-top:12px"><div class="routine-list">${ROUTINES.map(routineCard).join("")}</div></div>
+        <p class="muted" style="margin-top:4px">Elige qué quieres trabajar y luego la rutina que más te apetezca. Todas tienen 4 o 5 ejercicios.</p>
+        <div class="section" style="margin-top:12px">${categoryGrid()}</div>
         <div class="section">
           <h3 class="section-title">Mis rutinas</h3>
           ${custom}
           <a class="btn ghost block" style="margin-top:12px" href="#/crear">➕ Crear mi propia rutina</a>
         </div>`,
+    };
+  }
+
+  function viewCategory(id) {
+    const c = catOf(id);
+    if (!c) return notFound();
+    const list = ROUTINES.filter((r) => r.cat === id);
+    return {
+      title: c.name, back: true,
+      html: `
+        <div class="detail-head"><div class="tile lg" style="--c:${c.color}">${c.emoji}</div>
+          <div><h2>${esc(c.name)}</h2><p class="muted" style="margin:4px 0 0">${esc(c.desc)}</p></div></div>
+        <p class="muted small">Elige la que más te apetezca hoy. Puedes ir cambiando para no aburrirte.</p>
+        <div class="routine-list">${list.map(routineCard).join("")}</div>`,
     };
   }
 
@@ -239,13 +310,15 @@
       return exItem(ex, { num: i + 1, right: `${sets > 1 ? `${sets} series × ` : ""}${amountText(ex, amt, true)}` });
     }).join("");
     const isCustom = db.custom.some((c) => c.id === r.id);
+    const c = r.cat ? catOf(r.cat) : null;
+    const canWarm = r.cat && r.cat !== "movilidad";
     return {
-      title: r.name, back: true, cta: true,
+      title: r.name, back: true, cta: true, parent: c ? `#/categoria/${c.id}` : "#/rutinas",
       html: `
         <div class="detail-head"><div class="tile lg" style="--c:${esc(r.color || "#C4553A")}">${esc(r.emoji || "⭐")}</div>
-          <div><h2>${esc(r.name)}</h2>${r.desc ? `<p class="muted" style="margin:4px 0 0">${esc(r.desc)}</p>` : ""}</div></div>
+          <div>${c ? `<div class="eyebrow-s">${esc(c.name)}</div>` : ""}<h2>${esc(r.name)}</h2>${r.desc ? `<p class="muted" style="margin:4px 0 0">${esc(r.desc)}</p>` : ""}</div></div>
         <div class="tags">
-          <span class="tag">⏱ ${estimate(r)} min</span>
+          <span class="tag">⏱ ${estimate(withWarmup(r))} min</span>
           <span class="tag">${r.items.length} ejercicios</span>
           <span class="tag">${levelDots(routineLevel(r))}</span>
         </div>
@@ -253,6 +326,8 @@
           <strong>Necesitas:</strong>
           <div class="tags" style="margin-top:8px">${eq.length ? eq.map((e) => `<span class="tag">${EQUIP[e].emoji} ${EQUIP[e].name}</span>`).join("") : `<span class="tag">🙌 Nada, solo tu cuerpo</span>`}</div>
           <p class="small muted" style="margin:10px 0 0">Descanso entre series: ${r.rest || 40} segundos.</p>
+          ${canWarm ? `<div class="switch-row" style="margin-top:8px;border-top:1px solid var(--line);padding-top:12px"><div><strong>Calentamiento</strong><div class="small muted">2 minutos suaves antes de empezar</div></div>
+            <label class="switch"><input type="checkbox" id="warmSw" ${db.settings.warmup !== false ? "checked" : ""}><span></span></label></div>` : ""}
         </div>
         <div class="section"><h3 class="section-title">Ejercicios</h3><div class="ex-list">${list}</div></div>
         <div class="section row" style="flex-wrap:wrap">
@@ -261,6 +336,9 @@
             : `<button class="btn ghost small" data-act="copy-routine" data-id="${esc(r.id)}">📋 Copiar y modificar</button>`}
         </div>
         <div class="sticky-cta"><div><button class="btn block huge" data-act="start" data-id="${esc(r.id)}">▶ Empezar</button></div></div>`,
+      after() {
+        $("#warmSw")?.addEventListener("change", (e) => { db.settings.warmup = e.target.checked; save(); router(); });
+      },
     };
   }
 
@@ -305,15 +383,14 @@
     return {
       title: ex.name, back: true, cta: true,
       html: `
-        <div class="detail-head"><div class="tile lg" style="--c:${z.color}">${z.emoji}</div>
-          <div><h2>${esc(ex.name)}</h2>
-          <div class="tags" style="margin-top:8px"><span class="tag">${z.emoji} ${z.name}</span><span class="tag">${levelDots(ex.level)}</span></div></div></div>
-        <p class="lead">${esc(ex.summary)}</p>
-        <div class="tags">${ex.equip.map((e) => `<span class="tag">${EQUIP[e].emoji} ${EQUIP[e].name}</span>`).join("")}
-          <span class="tag">🎯 ${amountText(ex, ex.reps || ex.secs)}</span></div>
-        <div class="section">${videoBlock(ex)}</div>
+        <h2 class="ex-title">${esc(ex.name)}</h2>
+        <div class="tags" style="margin:8px 0 12px"><span class="tag">${z.emoji} ${z.name}</span><span class="tag">${levelDots(ex.level)}</span>
+          ${ex.equip.map((e) => `<span class="tag">${EQUIP[e].emoji} ${EQUIP[e].name}</span>`).join("")}</div>
+        ${viewerBlock(ex)}
+        <p class="lead" style="margin-top:14px">${esc(ex.summary)} <span class="tag">🎯 ${amountText(ex, ex.reps || ex.secs)}</span></p>
         <div class="section"><h3 class="section-title">Cómo se hace</h3><div class="stack">${howToHTML(ex)}</div></div>
-        ${usedIn.length ? `<div class="section"><h3 class="section-title">Aparece en</h3><div class="routine-list">${usedIn.map(routineCard).join("")}</div></div>` : ""}
+        <div class="section"><h3 class="section-title">Vídeo</h3>${videoBlock(ex)}</div>
+        ${usedIn.length ? `<div class="section"><h3 class="section-title">Aparece en estas rutinas</h3><div class="routine-list">${usedIn.slice(0, 6).map(routineCard).join("")}</div></div>` : ""}
         <div class="sticky-cta"><div><button class="btn block" data-act="try-ex" data-id="${ex.id}">▶ Probar este ejercicio</button></div></div>`,
     };
   }
@@ -357,7 +434,7 @@
     box.innerHTML = B.items.length ? B.items.map(([id, sets, amt], i) => {
       const ex = EX[id];
       return `<div class="builder-item">
-        <div class="top"><span class="tile" style="--c:${ZONES[ex.zone].color};width:44px;height:44px;font-size:1.3rem;border-radius:12px">${ZONES[ex.zone].emoji}</span>
+        <div class="top"><span class="tile pic" style="--c:${ZONES[ex.zone].color};width:48px;height:48px;border-radius:12px">${mini(ex.id)}</span>
           <h4>${esc(ex.name)}</h4>
           <button class="mini-btn" data-act="b-move" data-i="${i}" data-d="-1" aria-label="Subir" ${i === 0 ? "disabled style='opacity:.35'" : ""}><svg viewBox="0 0 24 24"><path d="M18 15l-6-6-6 6"/></svg></button>
           <button class="mini-btn" data-act="b-move" data-i="${i}" data-d="1" aria-label="Bajar" ${i === B.items.length - 1 ? "disabled style='opacity:.35'" : ""}><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
@@ -376,7 +453,7 @@
       $("#pkList", sheet).innerHTML = list.map((e) => {
         const n = B.items.filter(([id]) => id === e.id).length;
         return `<button class="ex-item" style="width:100%;border:0;text-align:left" data-act="b-pick" data-id="${e.id}">
-          <div class="tile" style="--c:${ZONES[e.zone].color}">${ZONES[e.zone].emoji}</div>
+          <div class="tile pic" style="--c:${ZONES[e.zone].color}">${mini(e.id)}</div>
           <div class="grow"><h4>${esc(e.name)}</h4><div class="sub">${esc(ZONES[e.zone].name)} · ${esc(EQUIP[e.equip[0]].name)}</div></div>
           <span class="tag" style="${n ? "background:var(--sage);color:#fff" : ""}">${n ? "✓ Añadido" : "＋"}</span></button>`;
       }).join("");
@@ -450,7 +527,7 @@
     };
   }
   function openManualSheet() {
-    const types = [["🚶‍♀️", "Paseo"], ["🏊‍♀️", "Natación"], ["🧘‍♀️", "Yoga / Pilates"], ["💃", "Baile"], ["🚴‍♀️", "Bicicleta"], ["✨", "Otra actividad"]];
+    const types = [["🚶‍♀️", "Paseo"], ["🧘‍♀️", "Yoga"], ["🏊‍♀️", "Natación"], ["🚴‍♀️", "Bici"], ["🏋️‍♀️", "Gimnasio"]];
     const st = { t: 0, feeling: 3, minutes: 30 };
     openSheet(`<h2>Apuntar actividad</h2>
       <div class="stack">
@@ -554,6 +631,7 @@
   const ROUTES = [
     [/^\/?$/, viewHome, "home"],
     [/^\/rutinas$/, viewRoutines, "rutinas"],
+    [/^\/categoria\/([^/]+)$/, viewCategory, "rutinas", "#/rutinas"],
     [/^\/rutina\/([^/]+)$/, viewRoutineDetail, "rutinas", "#/rutinas"],
     [/^\/crear(?:\/([^/]+))?$/, viewBuilder, "rutinas", "#/rutinas"],
     [/^\/ejercicios$/, viewExercises, "ejercicios"],
@@ -567,7 +645,7 @@
     let view = notFound(), tab = "";
     for (const [re, fn, t, parent] of ROUTES) {
       const m = path.match(re);
-      if (m) { view = fn(m[1]); tab = t; parentHash = parent || "#/"; break; }
+      if (m) { view = fn(m[1]); tab = t; parentHash = view.parent || parent || "#/"; break; }
     }
     const main = $("#view");
     main.innerHTML = view.html;
@@ -577,6 +655,8 @@
     $("#backBtn").hidden = !view.back;
     $$(".tabbar a").forEach((a) => a.classList.toggle("on", a.dataset.tab === tab));
     view.after?.();
+    window.Figure3D?.sweep();
+    mountFigures(main);
   }
   window.addEventListener("hashchange", () => { navCount++; closeSheet(); router(); window.scrollTo(0, 0); });
   $("#backBtn").addEventListener("click", () => { if (navCount > 0) history.back(); else location.hash = parentHash; });
@@ -718,7 +798,7 @@
     ensureAudio();
     const { steps, total } = buildSteps(r);
     if (!steps.length) { toast("Esta rutina no tiene ejercicios"); return; }
-    P = { r, steps, total, idx: -1, start: Date.now(), done: new Set(), t: null, feeling: 3 };
+    P = { r, steps, total, warm: r.warm || 0, idx: -1, start: Date.now(), done: new Set(), t: null, feeling: 3, fig: null };
     $("#player").hidden = false;
     document.body.classList.add("no-scroll");
     keepAwake(true);
@@ -728,7 +808,9 @@
   function stopWorkout() {
     if (!P) return;
     clearInterval(P.interval);
+    P.fig?.el._inst?.destroy();
     P = null;
+    setTimeout(() => window.Figure3D?.sweep(), 0);
     $("#player").hidden = true; $("#player").innerHTML = "";
     $("#player").classList.remove("resting");
     document.body.classList.remove("no-scroll");
@@ -837,13 +919,15 @@
         <div class="p-body">
           <div class="p-label">${st.kind === "switch" ? "Cambia de lado" : "Descansa y respira"}</div>
           ${ringHTML(rem, P.t.total)}
-          ${nex ? `<div class="p-next"><div class="tile" style="--c:${ZONES[nex.zone].color}">${ZONES[nex.zone].emoji}</div>
+          ${nex ? `<div class="p-next">
             <div class="grow"><div class="small muted" style="font-weight:800">${nx.i === st.i ? `SIGUIENTE: SERIE ${nx.set} DE ${nx.sets}` : "SIGUIENTE EJERCICIO"}</div>
-            <strong>${esc(nex.name)}</strong><div class="small muted">${amountText(nex, nx.amt)}</div></div></div>` : ""}
+            <strong>${esc(nex.name)}</strong><div class="small muted">${amountText(nex, nx.amt)}</div></div></div>
+            <div id="pFigSlot" class="p-fig-slot small"></div>` : ""}
         </div>
         <div class="p-actions">
           <div class="row"><button class="btn ghost" data-act="p-more">+15 s</button><button class="btn green" data-act="p-next">Seguir ›</button></div>
         </div>`;
+      if (nex) placePlayerFig(nx.id);
       return;
     }
 
@@ -859,9 +943,10 @@
       main = `<div class="p-big">${st.amt}<small>repeticiones${ex.side ? " con cada lado" : ""}</small></div>`;
       action = `<button class="btn huge block green" data-act="p-next">✓ ¡Hecho!</button>`;
     }
-    el.innerHTML = `${playerTop(`Ejercicio ${st.i + 1} de ${P.total}`)}
+    const label = st.i < P.warm ? `Calentamiento ${st.i + 1} de ${P.warm}` : `Ejercicio ${st.i - P.warm + 1} de ${P.total - P.warm}`;
+    el.innerHTML = `${playerTop(label)}
       <div class="p-body">
-        <div class="tile lg" style="--c:${z.color}">${z.emoji}</div>
+        <div id="pFigSlot" class="p-fig-slot"></div>
         <div class="p-name">${esc(ex.name)}</div>
         ${setLabel ? `<div class="p-label">${setLabel}</div>` : ""}
         ${dots}
@@ -876,6 +961,20 @@
           <button class="btn ghost small" data-act="p-skip">Saltar ejercicio ›</button>
         </div>
       </div>`;
+    placePlayerFig(ex.id);
+  }
+  /* El muñeco del reproductor se reutiliza entre pantallas para no recargarlo */
+  function placePlayerFig(id) {
+    const slot = $("#pFigSlot"); if (!slot) return;
+    const small = slot.classList.contains("small");
+    if (P.fig && P.fig.id === id) { P.fig.el.classList.toggle("small", small); slot.replaceWith(P.fig.el); return; }
+    P.fig?.el._inst?.destroy();
+    const wrap = document.createElement("div");
+    wrap.innerHTML = figBox(id, "p-fig" + (small ? " small" : ""));
+    const el = wrap.firstElementChild;
+    slot.replaceWith(el);
+    P.fig = { id, el };
+    mountFigures(el.parentNode);
   }
   function playerInfo() {
     const st = P.steps[P.idx];
@@ -943,7 +1042,18 @@
      ACCIONES (delegación de eventos)
      ========================================================= */
   const ACTIONS = {
-    "start": (el) => { const r = getRoutine(el.dataset.id); if (r) startWorkout(r); },
+    "start": (el) => { const r = getRoutine(el.dataset.id); if (r) startWorkout(withWarmup(r)); },
+    "vt": (el) => {
+      const v = el.closest(".viewer"), foto = el.dataset.v === "foto";
+      $$("[data-act='vt']", v).forEach((b) => b.classList.toggle("on", b === el));
+      $(".fig3d", v).hidden = foto; $(".photo-anim", v).hidden = !foto;
+      $("[data-hint]", v).textContent = foto ? "📷 Fotos de una persona real (inicio y final)" : "👆 Arrastra para girar el muñeco";
+    },
+    "slow": (el) => {
+      figSlow = !figSlow;
+      $$(".fig3d").forEach((f) => f._inst?.setSpeed(figSlow ? 0.5 : 1));
+      el.textContent = figSlow ? "🐇 Velocidad normal" : "🐢 Más despacio";
+    },
     "try-ex": (el) => {
       const ex = EX[el.dataset.id];
       startWorkout({ id: "ex-" + ex.id, name: ex.name, emoji: ZONES[ex.zone].emoji, rest: 40, items: [[ex.id, 2, ex.reps || ex.secs]] });

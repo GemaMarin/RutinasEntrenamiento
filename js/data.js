@@ -529,18 +529,18 @@ const EXERCISES = [
     yt: "equilibrio a una pierna personas mayores",
   },
   {
-    id: "tandem-walk", name: "Caminar talón-punta", zone: "equilibrio", equip: ["cuerpo"], level: 2,
-    type: "time", secs: 30,
-    summary: "Como caminar sobre una línea.",
+    id: "tandem-stance", name: "Pies en línea (tándem)", zone: "equilibrio", equip: ["cuerpo"], level: 2,
+    type: "time", secs: 20, side: true,
+    summary: "Como estar de pie sobre una cuerda: entrena el equilibrio.",
     steps: [
       "Colócate junto a una pared o encimera para apoyarte si hace falta.",
-      "Camina poniendo el talón de un pie justo delante de la punta del otro.",
-      "Mira al frente, no a los pies.",
-      "Da 10–15 pasos, date la vuelta y repite.",
+      "Pon un pie justo delante del otro, el talón tocando la punta del de atrás.",
+      "Mira al frente y aguanta el tiempo indicado. Luego cambia el pie de delante.",
+      "Cuando sea fácil, camina así 10–15 pasos.",
     ],
-    tips: ["Brazos abiertos para equilibrarte."],
-    caution: "Despeja el pasillo de alfombras y obstáculos.",
-    yt: "caminar talon punta ejercicio equilibrio mayores",
+    tips: ["Brazos un poco abiertos para equilibrarte."],
+    caution: "Hazlo con algo cerca a lo que agarrarte.",
+    yt: "postura tandem equilibrio mayores",
   },
   {
     id: "weight-shift", name: "Cambio de peso lateral", zone: "equilibrio", equip: ["silla"], level: 1,
@@ -720,119 +720,419 @@ const EXERCISES = [
     type: "time", secs: 30, side: true,
     summary: "Tobillos ágiles para caminar con seguridad.",
     steps: [
-      "Sentada, levanta un pie del suelo.",
-      "Dibuja círculos con la punta del pie.",
-      "Cambia de sentido a mitad y luego de pie.",
+      "Sentada, estira una pierna y levanta un poco el pie del suelo.",
+      "Sube y baja la punta del pie despacio varias veces.",
+      "Después dibuja círculos con la punta, en los dos sentidos.",
+      "Cambia de pie.",
     ],
     tips: [],
     caution: "",
     yt: "circulos de tobillo movilidad",
   },
+  /* ---------------- EJERCICIOS AÑADIDOS ---------------- */
+  {
+    id: "sumo-squat", name: "Sentadilla sumo con mancuerna", zone: "piernas", equip: ["mancuernas"], level: 2,
+    type: "reps", reps: 10,
+    summary: "Piernas abiertas: trabaja glúteos y la cara interna del muslo.",
+    steps: [
+      "Separa bien los pies, más que el ancho de los hombros, con las puntas hacia fuera.",
+      "Sujeta una mancuerna con las dos manos, colgando entre las piernas.",
+      "Baja doblando las rodillas, que siguen la dirección de las puntas de los pies.",
+      "Sube apretando los glúteos.",
+    ],
+    tips: ["Espalda recta y pecho alto durante todo el movimiento."],
+    caution: "",
+    yt: "sentadilla sumo con mancuerna principiantes",
+  },
+  {
+    id: "standing-kickback", name: "Patada de glúteo de pie", zone: "piernas", equip: ["silla"], level: 1,
+    type: "reps", reps: 10, side: true,
+    summary: "Glúteos sin tumbarse, sujetándote a una silla.",
+    steps: [
+      "De pie detrás de una silla, sujeta el respaldo con las dos manos.",
+      "Inclina el tronco un poco hacia delante.",
+      "Lleva una pierna estirada hacia atrás apretando el glúteo.",
+      "Vuelve despacio. Haz todas y cambia de pierna.",
+    ],
+    tips: ["No arquees la espalda: el movimiento es pequeño."],
+    caution: "",
+    yt: "patada de gluteo de pie con silla mayores",
+  },
+  {
+    id: "clamshell", name: "La almeja con banda", zone: "piernas", equip: ["esterilla", "banda"], level: 1,
+    type: "reps", reps: 12, side: true,
+    summary: "Glúteo lateral, muy bueno para la cadera.",
+    steps: [
+      "Túmbate de lado con las rodillas dobladas y la banda justo encima de las rodillas.",
+      "Pies juntos y cadera quieta.",
+      "Abre la rodilla de arriba como una almeja, sin separar los pies.",
+      "Cierra despacio. Haz todas y cambia de lado.",
+    ],
+    tips: ["Sin banda también funciona al principio."],
+    caution: "",
+    yt: "ejercicio almeja clamshell con banda",
+  },
+  {
+    id: "bent-row", name: "Remo inclinada con dos mancuernas", zone: "espalda", equip: ["mancuernas"], level: 2,
+    type: "reps", reps: 10,
+    summary: "Espalda media y brazos, con las dos manos a la vez.",
+    steps: [
+      "De pie, rodillas un poco dobladas, inclina el tronco hacia delante con la espalda recta.",
+      "Deja colgar las mancuernas debajo de los hombros.",
+      "Sube las mancuernas hacia la cintura juntando los omóplatos.",
+      "Baja despacio.",
+    ],
+    tips: ["Mira al suelo un poco por delante de los pies."],
+    caution: "Si te molesta la zona lumbar, haz el remo con una mano apoyada en la silla.",
+    yt: "remo inclinado con mancuernas principiantes",
+  },
+  {
+    id: "band-pulldown", name: "Jalón con banda sentada", zone: "espalda", equip: ["banda", "silla"], level: 1,
+    type: "reps", reps: 12,
+    summary: "Fortalece la espalda alta, como la máquina del gimnasio.",
+    steps: [
+      "Sentada, sujeta la banda con los brazos estirados por encima de la cabeza.",
+      "Separa las manos estirando la banda.",
+      "Baja los codos hacia los costados, llevando la banda por delante de la cara.",
+      "Vuelve a subir despacio.",
+    ],
+    tips: ["Piensa en meter los codos en los bolsillos de atrás."],
+    caution: "",
+    yt: "jalon con banda elastica sentado",
+  },
+  {
+    id: "reverse-fly", name: "Pájaro con mancuernas", zone: "espalda", equip: ["mancuernas"], level: 2,
+    type: "reps", reps: 10,
+    summary: "Parte trasera de los hombros y espalda alta: mejora la postura.",
+    steps: [
+      "Inclina el tronco hacia delante con la espalda recta y rodillas suaves.",
+      "Deja colgar las mancuernas con los codos un poco doblados.",
+      "Abre los brazos hacia los lados como unas alas.",
+      "Baja despacio.",
+    ],
+    tips: ["Usa muy poco peso (1–2 kg)."],
+    caution: "",
+    yt: "pajaro con mancuernas de pie principiantes",
+  },
+  {
+    id: "shrug", name: "Encogimiento de hombros", zone: "espalda", equip: ["mancuernas"], level: 1,
+    type: "reps", reps: 12,
+    summary: "Fortalece la zona del cuello y trapecios.",
+    steps: [
+      "De pie, una mancuerna en cada mano a los lados.",
+      "Sube los hombros hacia las orejas.",
+      "Aguanta un segundo y baja despacio.",
+    ],
+    tips: ["No gires los hombros: solo arriba y abajo."],
+    caution: "",
+    yt: "encogimiento de hombros con mancuernas",
+  },
+  {
+    id: "chair-incline-pushup", name: "Flexiones apoyada en la silla", zone: "pecho", equip: ["silla"], level: 2,
+    type: "reps", reps: 8,
+    summary: "Paso intermedio entre las de pared y las del suelo.",
+    steps: [
+      "Apoya la silla contra la pared para que no se mueva.",
+      "Pon las manos en el borde del asiento y lleva los pies hacia atrás hasta que el cuerpo quede recto.",
+      "Dobla los codos acercando el pecho a la silla.",
+      "Empuja para volver.",
+    ],
+    tips: ["Un sofá firme o una encimera también sirven."],
+    caution: "La silla debe estar bien sujeta contra la pared.",
+    yt: "flexiones inclinadas apoyado en silla",
+  },
+  {
+    id: "floor-fly", name: "Aperturas en el suelo", zone: "pecho", equip: ["mancuernas", "esterilla"], level: 2,
+    type: "reps", reps: 10,
+    summary: "Abre y fortalece el pecho.",
+    steps: [
+      "Túmbate boca arriba con las rodillas dobladas y una mancuerna en cada mano, brazos hacia el techo.",
+      "Codos un poco doblados.",
+      "Abre los brazos hacia los lados hasta casi tocar el suelo.",
+      "Vuelve a juntarlos como si abrazaras un árbol.",
+    ],
+    tips: ["El suelo limita el recorrido y protege los hombros."],
+    caution: "",
+    yt: "aperturas con mancuernas en el suelo",
+  },
+  {
+    id: "scaption", name: "Elevación en diagonal", zone: "hombros", equip: ["mancuernas"], level: 1,
+    type: "reps", reps: 10,
+    summary: "La elevación más amable para el hombro.",
+    steps: [
+      "De pie, mancuernas a los lados con los pulgares hacia delante.",
+      "Sube los brazos en diagonal, entre el frente y el lado, formando una V.",
+      "Hasta la altura de los hombros.",
+      "Baja despacio.",
+    ],
+    tips: ["Codos casi estirados."],
+    caution: "",
+    yt: "elevacion de hombros en diagonal scaption",
+  },
+  {
+    id: "band-shoulder-press", name: "Press de hombros con banda", zone: "hombros", equip: ["banda"], level: 1,
+    type: "reps", reps: 12,
+    summary: "Press de hombros pisando la banda.",
+    steps: [
+      "Pisa la banda con los pies y sujeta un extremo en cada mano a la altura de los hombros.",
+      "Empuja las manos hacia arriba.",
+      "Baja despacio a la altura de las orejas.",
+    ],
+    tips: ["Aprieta el abdomen para no arquear la espalda."],
+    caution: "",
+    yt: "press de hombros con banda elastica",
+  },
+  {
+    id: "band-lateral-raise", name: "Elevación lateral con banda", zone: "hombros", equip: ["banda"], level: 1,
+    type: "reps", reps: 12,
+    summary: "Hombros redondeados con la banda bajo los pies.",
+    steps: [
+      "Pisa la banda y sujeta un extremo en cada mano a los lados.",
+      "Sube los brazos hacia los lados hasta la altura de los hombros.",
+      "Baja despacio.",
+    ],
+    tips: ["Codos ligeramente doblados."],
+    caution: "",
+    yt: "elevaciones laterales con banda elastica",
+  },
+  {
+    id: "seated-curl", name: "Curl de bíceps sentada", zone: "brazos", equip: ["mancuernas", "silla"], level: 1,
+    type: "reps", reps: 12,
+    summary: "El curl de siempre, más cómodo y estable.",
+    steps: [
+      "Sentada en el borde de la silla, espalda recta, una mancuerna en cada mano.",
+      "Codos pegados al cuerpo.",
+      "Sube las mancuernas hacia los hombros.",
+      "Baja despacio.",
+    ],
+    tips: ["Puedes alternar brazos."],
+    caution: "",
+    yt: "curl de biceps sentado mancuernas",
+  },
+  {
+    id: "close-press", name: "Press cerrado en el suelo", zone: "brazos", equip: ["mancuernas", "esterilla"], level: 2,
+    type: "reps", reps: 10,
+    summary: "Tríceps tumbada, con los codos pegados al cuerpo.",
+    steps: [
+      "Túmbate boca arriba con las rodillas dobladas y una mancuerna en cada mano, palmas mirándose.",
+      "Codos pegados a los costados.",
+      "Empuja las mancuernas hacia el techo.",
+      "Baja despacio hasta que los codos toquen el suelo.",
+    ],
+    tips: ["Los codos no se abren hacia los lados."],
+    caution: "",
+    yt: "press cerrado con mancuernas en el suelo",
+  },
+  {
+    id: "heel-taps", name: "Toques de talón tumbada", zone: "core", equip: ["esterilla"], level: 1,
+    type: "reps", reps: 8, side: true,
+    summary: "Abdomen bajo, sin forzar el cuello.",
+    steps: [
+      "Boca arriba, piernas en el aire con las rodillas dobladas a 90° (como sobre una mesa).",
+      "Pega la zona lumbar al suelo.",
+      "Baja un pie despacio hasta tocar el suelo con el talón.",
+      "Vuelve y cambia de pierna.",
+    ],
+    tips: ["Si cuesta, empieza con un pie apoyado en el suelo."],
+    caution: "",
+    yt: "toques de talon tumbado abdominales",
+  },
+  {
+    id: "seated-rotation", name: "Giro con mancuerna sentada", zone: "core", equip: ["mancuernas", "silla"], level: 1,
+    type: "reps", reps: 8, side: true,
+    summary: "Oblicuos y movilidad de la columna.",
+    steps: [
+      "Sentada con la espalda recta, sujeta una mancuerna con las dos manos delante del pecho.",
+      "Gira el tronco despacio hacia un lado.",
+      "Vuelve al centro y gira hacia el otro.",
+    ],
+    tips: ["La cadera se queda quieta: gira solo el tronco."],
+    caution: "Evítalo si tienes una lesión de espalda reciente.",
+    yt: "rotacion de tronco sentado con mancuerna",
+  },
+  {
+    id: "knee-lift-hold", name: "Rodilla arriba y aguanta", zone: "equilibrio", equip: ["silla"], level: 1,
+    type: "reps", reps: 6, side: true,
+    summary: "Equilibrio a una pierna de forma dinámica.",
+    steps: [
+      "De pie detrás de una silla, sujeta el respaldo.",
+      "Sube una rodilla hasta la altura de la cadera.",
+      "Aguanta 2–3 segundos y baja despacio.",
+      "Alterna las piernas.",
+    ],
+    tips: ["Cuando sea fácil, sujétate con una sola mano."],
+    caution: "",
+    yt: "elevacion de rodilla equilibrio mayores",
+  },
+  {
+    id: "heel-toe-rock", name: "Balanceo talón-punta", zone: "equilibrio", equip: ["silla"], level: 1,
+    type: "reps", reps: 10,
+    summary: "Fortalece tobillos y mejora el equilibrio.",
+    steps: [
+      "De pie detrás de una silla, sujeta el respaldo.",
+      "Sube despacio de puntillas.",
+      "Baja y apoya los talones levantando las puntas de los pies.",
+      "Sigue balanceándote suavemente.",
+    ],
+    tips: ["Movimiento lento y controlado."],
+    caution: "",
+    yt: "balanceo talon punta equilibrio mayores",
+  },
+
 ];
 
-/* ---------------- RUTINAS PREDEFINIDAS ----------------
-   items: [id de ejercicio, series, repeticiones o segundos]
-   rest: descanso en segundos entre series                     */
-const WARMUP = [["march", 1, 60], ["shoulder-circles", 1, 30], ["hip-circles", 1, 30]];
-const COOLDOWN = [["hamstring-stretch", 1, 30], ["chest-stretch", 1, 30]];
+
+/* Ejercicios con fotos reales (img/fotos/<id>-0.jpg y -1.jpg).
+   Fuente: free-exercise-db (dominio público, Unlicense). */
+const PHOTOS = new Set(["squat", "goblet-squat", "sumo-squat", "split-squat", "glute-bridge", "rdl", "bent-row", "db-row", "pull-apart", "prone-extension", "shrug", "floor-press", "db-shoulder-press", "lateral-raise", "front-raise", "scaption", "band-external-rotation", "band-shoulder-press", "band-lateral-raise", "biceps-curl", "hammer-curl", "seated-curl", "overhead-triceps", "triceps-kickback", "dead-bug", "crunch", "child-pose", "cat-cow", "neck-stretch", "arm-circles", "ankle-circles"]);
+
+/* ---------------- CATEGORÍAS Y RUTINAS ----------------
+   Cada rutina tiene 4 o 5 ejercicios.
+   Un ejercicio puede escribirse como "id" (usa series y cantidad por defecto)
+   o como ["id", series, repeticiones-o-segundos].                         */
+const CATEGORIES = [
+  { id: "full",       name: "Cuerpo completo",    emoji: "⭐", color: "#C4553A", desc: "Un poco de todo en cada sesión", rest: 45 },
+  { id: "piernas",    name: "Piernas y glúteos",  emoji: "🦵", color: "#E07A5F", desc: "Subir escaleras y levantarte sin esfuerzo", rest: 45 },
+  { id: "espalda",    name: "Espalda",            emoji: "🧍‍♀️", color: "#3D8B7D", desc: "Mejor postura y menos molestias", rest: 40 },
+  { id: "pecho",      name: "Pecho",              emoji: "💗", color: "#D1495B", desc: "Fuerza para empujar y levantarte del suelo", rest: 45 },
+  { id: "hombros",    name: "Hombros",            emoji: "🙆‍♀️", color: "#8E6CBF", desc: "Alcanzar estanterías y altillos", rest: 40 },
+  { id: "brazos",     name: "Brazos",             emoji: "💪", color: "#E8A33D", desc: "Cargar la compra y los nietos", rest: 40 },
+  { id: "core",       name: "Abdomen",            emoji: "🎯", color: "#2F6FA8", desc: "Una zona media fuerte protege la espalda", rest: 30 },
+  { id: "equilibrio", name: "Equilibrio",         emoji: "⚖️", color: "#5C9E5A", desc: "Prevenir caídas. Ideal 3 días por semana", rest: 30 },
+  { id: "movilidad",  name: "Estiramientos",      emoji: "🧘‍♀️", color: "#4A9BB5", desc: "Suave y relajante, para cualquier día", rest: 10 },
+];
 
 const ROUTINES = [
-  {
-    id: "full-1", name: "Cuerpo completo · Iniciación", emoji: "🌱", color: "#5C9E5A", level: 1,
-    desc: "La rutina ideal para empezar. Casi todo de pie o con silla.",
-    rest: 45,
-    items: [...WARMUP,
-      ["sit-stand", 2, 10], ["wall-pushup", 2, 10], ["band-row", 2, 12],
-      ["calf-raise", 2, 12], ["front-raise", 2, 10], ["wall-plank", 2, 20],
-      ...COOLDOWN],
-  },
-  {
-    id: "full-2", name: "Cuerpo completo · Con mancuernas", emoji: "🏋️‍♀️", color: "#E07A5F", level: 2,
-    desc: "Cuando la de iniciación se quede corta.",
-    rest: 50,
-    items: [...WARMUP,
-      ["squat", 3, 10], ["db-row", 2, 10], ["floor-press", 3, 10],
-      ["rdl", 2, 10], ["db-shoulder-press", 2, 10], ["bird-dog", 2, 8],
-      ["child-pose", 1, 30], ...COOLDOWN],
-  },
-  {
-    id: "legs", name: "Piernas y glúteos", emoji: "🦵", color: "#E07A5F", level: 1,
-    desc: "Fuerza para subir escaleras y levantarse con facilidad.",
-    rest: 45,
-    items: [...WARMUP,
-      ["sit-stand", 3, 10], ["glute-bridge", 3, 12], ["hip-abduction-stand", 2, 10],
-      ["band-abduction-seated", 2, 15], ["calf-raise", 2, 15],
-      ["quad-stretch", 1, 30], ["hamstring-stretch", 1, 30]],
-  },
-  {
-    id: "shoulders-arms", name: "Hombros y brazos", emoji: "💪", color: "#8E6CBF", level: 1,
-    desc: "Para cargar bolsas y alcanzar estanterías sin esfuerzo.",
-    rest: 40,
-    items: [["arm-circles", 1, 30], ["shoulder-circles", 1, 30],
-      ["band-external-rotation", 2, 12], ["db-shoulder-press", 2, 10], ["lateral-raise", 2, 10],
-      ["biceps-curl", 2, 12], ["triceps-kickback", 2, 10], ["hammer-curl", 2, 10],
-      ["chest-stretch", 1, 30], ["neck-stretch", 1, 30]],
-  },
-  {
-    id: "back-posture", name: "Espalda y postura", emoji: "🧍‍♀️", color: "#3D8B7D", level: 1,
-    desc: "Endereza la postura y alivia la tensión de la espalda.",
-    rest: 40,
-    items: [["shoulder-circles", 1, 30], ["cat-cow", 1, 8],
-      ["band-row", 3, 12], ["pull-apart", 2, 12], ["bird-dog", 2, 8],
-      ["glute-bridge", 2, 12], ["prone-extension", 2, 8],
-      ["child-pose", 1, 30], ["chest-stretch", 1, 30]],
-  },
-  {
-    id: "upper", name: "Pecho, espalda y brazos", emoji: "🤸‍♀️", color: "#D1495B", level: 2,
-    desc: "Tren superior completo combinando banda y mancuernas.",
-    rest: 45,
-    items: [["arm-circles", 1, 30], ["shoulder-circles", 1, 30],
-      ["wall-pushup", 2, 12], ["db-row", 2, 10], ["band-chest-press", 2, 12],
-      ["pull-apart", 2, 12], ["biceps-curl", 2, 12], ["overhead-triceps", 2, 10],
-      ["chest-stretch", 1, 30]],
-  },
-  {
-    id: "core", name: "Abdomen y core", emoji: "🎯", color: "#2F6FA8", level: 1,
-    desc: "Una zona media fuerte protege la espalda.",
-    rest: 30,
-    items: [["march", 1, 60], ["cat-cow", 1, 8],
-      ["seated-march", 2, 40], ["bird-dog", 2, 8], ["dead-bug", 2, 8],
-      ["wall-plank", 2, 20], ["glute-bridge", 2, 12], ["child-pose", 1, 30]],
-  },
-  {
-    id: "balance", name: "Equilibrio y prevención de caídas", emoji: "⚖️", color: "#5C9E5A", level: 1,
-    desc: "Recomendada al menos 3 días por semana a partir de los 65.",
-    rest: 30,
-    items: [["march", 1, 60], ["ankle-circles", 1, 30],
-      ["weight-shift", 2, 30], ["single-leg", 2, 20], ["calf-raise", 2, 12],
-      ["hip-abduction-stand", 2, 10], ["tandem-walk", 2, 30], ["clock-reach", 1, 5]],
-  },
-  {
-    id: "mobility", name: "Movilidad y estiramientos", emoji: "🧘‍♀️", color: "#4A9BB5", level: 1,
-    desc: "Suave y relajante. Perfecta para los días de descanso.",
-    rest: 10,
-    items: [["neck-stretch", 1, 30], ["shoulder-circles", 1, 30], ["seated-twist", 1, 8],
-      ["ankle-circles", 1, 30], ["cat-cow", 1, 8], ["hamstring-stretch", 1, 30],
-      ["quad-stretch", 1, 30], ["chest-stretch", 1, 30], ["child-pose", 1, 45]],
-  },
-  {
-    id: "express", name: "Exprés de 10 minutos", emoji: "⚡", color: "#E8A33D", level: 1,
-    desc: "Para los días con poco tiempo. Mejor algo que nada.",
-    rest: 30,
-    items: [["march", 1, 60], ["sit-stand", 2, 10], ["wall-pushup", 2, 10],
-      ["pull-apart", 2, 12], ["single-leg", 1, 20], ["chest-stretch", 1, 30]],
-  },
+  /* ---- Cuerpo completo ---- */
+  { id: "full-1", cat: "full", level: 1, name: "Primeros pasos", desc: "Sin material. La mejor para empezar.",
+    items: ["sit-stand", "wall-pushup", "glute-bridge", "calf-raise", "bird-dog"] },
+  { id: "full-2", cat: "full", level: 2, name: "Con mancuernas", desc: "Las cinco zonas principales con pesas.",
+    items: ["goblet-squat", "bent-row", "floor-press", "db-shoulder-press", "dead-bug"] },
+  { id: "full-3", cat: "full", level: 1, name: "Con banda elástica", desc: "Todo el cuerpo solo con la banda.",
+    items: ["band-abduction-seated", "band-row", "band-chest-press", "band-shoulder-press", "band-curl"] },
+  { id: "full-4", cat: "full", level: 1, name: "Todo sentada", desc: "En la silla, sin bajar al suelo.",
+    items: ["sit-stand", "band-pulldown", "db-shoulder-press", "seated-curl", "seated-march"] },
+  { id: "full-5", cat: "full", level: 1, name: "Fuerza y equilibrio", desc: "Combina fuerza con ejercicios anti-caídas.",
+    items: ["squat", "single-leg", "wall-pushup", "pull-apart", "knee-lift-hold"] },
+  { id: "full-6", cat: "full", level: 3, name: "Reto completo", desc: "Para cuando las demás se queden cortas.",
+    items: [["split-squat", 3, 8], ["rdl", 3, 10], ["knee-pushup", 3, 8], ["db-row", 3, 10], ["knee-plank", 3, 20]] },
+
+  /* ---- Piernas y glúteos ---- */
+  { id: "legs-1", cat: "piernas", level: 1, name: "Piernas básicas", desc: "Lo esencial, con una silla.",
+    items: ["sit-stand", "calf-raise", "hip-abduction-stand", "glute-bridge"] },
+  { id: "legs-2", cat: "piernas", level: 1, name: "Glúteos en la esterilla", desc: "Tumbada, cómoda y efectiva.",
+    items: ["glute-bridge", "side-leg-raise", "clamshell", "standing-kickback"] },
+  { id: "legs-3", cat: "piernas", level: 2, name: "Piernas con mancuernas", desc: "Un poco más de carga.",
+    items: ["goblet-squat", "rdl", "sumo-squat", "calf-raise"] },
+  { id: "legs-4", cat: "piernas", level: 1, name: "Sin bajar al suelo", desc: "Todo de pie o sentada.",
+    items: ["sit-stand", "standing-kickback", "hip-abduction-stand", "band-abduction-seated", "calf-raise"] },
+  { id: "legs-5", cat: "piernas", level: 3, name: "Reto de piernas", desc: "Tres series y ejercicios más exigentes.",
+    items: [["squat", 3, 12], ["split-squat", 3, 8], ["rdl", 3, 10], ["sumo-squat", 3, 10], ["glute-bridge", 3, 15]] },
+
+  /* ---- Espalda ---- */
+  { id: "back-1", cat: "espalda", level: 1, name: "Postura recta", desc: "Para dejar de encorvarse.",
+    items: ["pull-apart", "band-row", "prone-extension", "bird-dog"] },
+  { id: "back-2", cat: "espalda", level: 2, name: "Espalda con mancuernas", desc: "Remos y aperturas con pesas.",
+    items: ["bent-row", "db-row", "reverse-fly", "shrug"] },
+  { id: "back-3", cat: "espalda", level: 1, name: "Espalda con banda", desc: "Solo necesitas la banda elástica.",
+    items: ["band-row", "pull-apart", "band-pulldown", "band-external-rotation"] },
+  { id: "back-4", cat: "espalda", level: 1, name: "Espalda sin dolor", desc: "Suave, en la esterilla. Alivia la zona lumbar.",
+    items: ["cat-cow", "bird-dog", "glute-bridge", "prone-extension", "child-pose"] },
+  { id: "back-5", cat: "espalda", level: 2, name: "Espalda completa", desc: "Combina banda y mancuernas.",
+    items: ["db-row", "band-pulldown", "reverse-fly", "prone-extension", "pull-apart"] },
+
+  /* ---- Pecho ---- */
+  { id: "chest-1", cat: "pecho", level: 1, name: "Pecho para empezar", desc: "De pie, sin bajar al suelo.",
+    items: ["wall-pushup", "band-chest-press", "pull-apart", "chest-stretch"] },
+  { id: "chest-2", cat: "pecho", level: 2, name: "Pecho con mancuernas", desc: "Tumbada en la esterilla.",
+    items: ["floor-press", "floor-fly", "close-press", "chest-stretch"] },
+  { id: "chest-3", cat: "pecho", level: 2, name: "Flexiones paso a paso", desc: "De la pared a la silla y al suelo.",
+    items: ["wall-pushup", "chair-incline-pushup", "knee-pushup", "chest-stretch"] },
+  { id: "chest-4", cat: "pecho", level: 2, name: "Pecho y tríceps", desc: "Empujar con fuerza.",
+    items: ["floor-press", "chair-incline-pushup", "overhead-triceps", "triceps-kickback"] },
+  { id: "chest-5", cat: "pecho", level: 1, name: "Pecho con banda", desc: "Con la banda elástica, de pie.",
+    items: ["band-chest-press", "wall-pushup", "band-external-rotation", "pull-apart"] },
+
+  /* ---- Hombros ---- */
+  { id: "sh-1", cat: "hombros", level: 1, name: "Hombros básicos", desc: "Elevaciones suaves con poco peso.",
+    items: ["shoulder-circles", "front-raise", "lateral-raise", "band-external-rotation"] },
+  { id: "sh-2", cat: "hombros", level: 2, name: "Hombros sentada", desc: "Más estable para la espalda.",
+    items: ["db-shoulder-press", "lateral-raise", "front-raise", "shrug"] },
+  { id: "sh-3", cat: "hombros", level: 1, name: "Hombros con banda", desc: "Pisando la banda elástica.",
+    items: ["band-shoulder-press", "band-lateral-raise", "band-external-rotation", "pull-apart"] },
+  { id: "sh-4", cat: "hombros", level: 1, name: "Hombros sanos", desc: "Movilidad y fuerza para cuidar la articulación.",
+    items: ["arm-circles", "band-external-rotation", "scaption", "pull-apart"] },
+  { id: "sh-5", cat: "hombros", level: 3, name: "Reto de hombros", desc: "Tres series, cinco ejercicios.",
+    items: [["db-shoulder-press", 3, 10], ["scaption", 3, 10], ["lateral-raise", 3, 10], ["reverse-fly", 3, 10], ["front-raise", 3, 10]] },
+
+  /* ---- Brazos ---- */
+  { id: "arms-1", cat: "brazos", level: 1, name: "Bíceps y tríceps", desc: "El clásico con mancuernas.",
+    items: ["biceps-curl", "triceps-kickback", "hammer-curl", "overhead-triceps"] },
+  { id: "arms-2", cat: "brazos", level: 1, name: "Brazos sentada", desc: "Todo en la silla.",
+    items: ["seated-curl", "overhead-triceps", "db-shoulder-press", "shrug"] },
+  { id: "arms-3", cat: "brazos", level: 1, name: "Brazos con banda", desc: "Pisando la banda.",
+    items: ["band-curl", "band-shoulder-press", "band-lateral-raise", "band-chest-press"] },
+  { id: "arms-4", cat: "brazos", level: 2, name: "Brazos tonificados", desc: "Variantes para no aburrirse.",
+    items: ["hammer-curl", "close-press", "band-curl", "triceps-kickback"] },
+  { id: "arms-5", cat: "brazos", level: 3, name: "Reto de brazos", desc: "Tres series de cada.",
+    items: [["biceps-curl", 3, 12], ["overhead-triceps", 3, 10], ["hammer-curl", 3, 12], ["close-press", 3, 10], ["triceps-kickback", 3, 10]] },
+
+  /* ---- Abdomen ---- */
+  { id: "core-1", cat: "core", level: 1, name: "Abdomen sin suelo", desc: "De pie y sentada.",
+    items: ["seated-march", "wall-plank", "seated-rotation", "knee-lift-hold"] },
+  { id: "core-2", cat: "core", level: 1, name: "Core en la esterilla", desc: "Sin forzar el cuello.",
+    items: ["dead-bug", "bird-dog", "glute-bridge", "heel-taps"] },
+  { id: "core-3", cat: "core", level: 2, name: "Abdominales suaves", desc: "Los de toda la vida, bien hechos.",
+    items: ["crunch", "heel-taps", "knee-plank", "side-plank-knees"] },
+  { id: "core-4", cat: "core", level: 1, name: "Espalda y abdomen", desc: "Para una columna fuerte.",
+    items: ["cat-cow", "bird-dog", "prone-extension", "knee-plank"] },
+  { id: "core-5", cat: "core", level: 3, name: "Reto de abdomen", desc: "Tres series, cinco ejercicios.",
+    items: [["dead-bug", 3, 10], ["knee-plank", 3, 25], ["side-plank-knees", 3, 15], ["crunch", 3, 12], ["bird-dog", 3, 8]] },
+
+  /* ---- Equilibrio ---- */
+  { id: "bal-1", cat: "equilibrio", level: 1, name: "Equilibrio con silla", desc: "El primer paso, siempre con apoyo.",
+    items: ["weight-shift", "single-leg", "heel-toe-rock", "calf-raise"] },
+  { id: "bal-2", cat: "equilibrio", level: 1, name: "Pies seguros", desc: "Tobillos fuertes y ágiles.",
+    items: ["ankle-circles", "heel-toe-rock", "calf-raise", "tandem-stance"] },
+  { id: "bal-3", cat: "equilibrio", level: 2, name: "Equilibrio en movimiento", desc: "Para el día a día.",
+    items: ["march", "knee-lift-hold", "clock-reach", "tandem-stance"] },
+  { id: "bal-4", cat: "equilibrio", level: 1, name: "Piernas firmes", desc: "Fuerza en las piernas para no caer.",
+    items: ["sit-stand", "hip-abduction-stand", "standing-kickback", "single-leg"] },
+  { id: "bal-5", cat: "equilibrio", level: 3, name: "Reto de equilibrio", desc: "Con menos apoyo y más tiempo.",
+    items: [["clock-reach", 2, 6], ["single-leg", 3, 30], ["tandem-stance", 3, 30], ["split-squat", 2, 8], ["knee-lift-hold", 2, 8]] },
+
+  /* ---- Estiramientos ---- */
+  { id: "mob-1", cat: "movilidad", level: 1, name: "Despertar suave", desc: "Ideal por la mañana, sentada.",
+    items: ["neck-stretch", "shoulder-circles", "seated-twist", "ankle-circles"] },
+  { id: "mob-2", cat: "movilidad", level: 1, name: "Espalda relajada", desc: "Suelta la tensión de la espalda.",
+    items: ["cat-cow", "child-pose", "seated-twist", "chest-stretch"] },
+  { id: "mob-3", cat: "movilidad", level: 1, name: "Piernas sueltas", desc: "Caderas, muslos y tobillos.",
+    items: ["hip-circles", "hamstring-stretch", "quad-stretch", "ankle-circles"] },
+  { id: "mob-4", cat: "movilidad", level: 1, name: "Todo sentada", desc: "Sin levantarte de la silla.",
+    items: ["neck-stretch", "shoulder-circles", "seated-twist", "hamstring-stretch", "ankle-circles"] },
+  { id: "mob-5", cat: "movilidad", level: 1, name: "Vuelta a la calma", desc: "Perfecta después de entrenar.",
+    items: ["chest-stretch", "quad-stretch", "hamstring-stretch", "child-pose"] },
 ];
 
-/* Plan semanal sugerido (0 = domingo ... 6 = sábado)
-   Basado en las recomendaciones de la OMS (2020) para mayores de 65:
-   fuerza ≥ 2 días/semana y equilibrio ≥ 3 días/semana.           */
-const WEEK_PLAN = {
-  1: "full-1",
-  2: "mobility",
-  3: "legs",
-  4: "balance",
-  5: "back-posture",
-  6: "balance",
-  0: null, // descanso / paseo
-};
+/* Calentamiento opcional (se añade al principio de las rutinas de fuerza) */
+const WARMUP = [["march", 1, 40], ["arm-circles", 1, 30], ["hip-circles", 1, 30]];
+
+/* Plan semanal sugerido (0 = domingo … 6 = sábado): categoría del día.
+   La rutina concreta va rotando cada semana.
+   Basado en la OMS (2020) para mayores de 65: fuerza ≥ 2 días/semana y equilibrio ≥ 3 días/semana. */
+const WEEK_PLAN = { 1: "full", 2: "equilibrio", 3: "piernas", 4: "equilibrio", 5: "espalda", 6: "movilidad", 0: null };
+
+/* Normaliza los ejercicios de cada rutina a [id, series, cantidad] */
+(function normalize() {
+  const byId = Object.fromEntries(EXERCISES.map((e) => [e.id, e]));
+  ROUTINES.forEach((r) => {
+    const cat = CATEGORIES.find((c) => c.id === r.cat);
+    r.emoji = cat.emoji; r.color = cat.color; r.rest = r.rest || cat.rest;
+    r.items = r.items.map((it) => {
+      if (Array.isArray(it)) return it;
+      const ex = byId[it];
+      const sets = ex.zone === "movilidad" ? 1 : 2;
+      return [it, sets, ex.reps || ex.secs];
+    });
+  });
+})();
