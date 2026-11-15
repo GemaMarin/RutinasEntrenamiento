@@ -1157,6 +1157,18 @@
   router();
   if (!db.settings.onboarded) onboarding();
   if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
-    window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("sw.js", { updateViaCache: "none" })
+        .then((reg) => reg.update())
+        .catch(() => {});
+    });
+    // Cuando se instala una versión nueva, recarga una vez para mostrarla (si no se está entrenando)
+    const hadController = !!navigator.serviceWorker.controller;
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (!hadController || reloaded || P) return;
+      reloaded = true;
+      location.reload();
+    });
   }
 })();
