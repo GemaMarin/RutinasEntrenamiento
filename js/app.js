@@ -41,7 +41,7 @@
   /* ---------------- Almacenamiento ---------------- */
   const KEY = "mi-gimnasio.v1";
   const DEFAULTS = {
-    settings: { name: "", size: "m", voice: true, sound: true, goal: 3, onboarded: false },
+    settings: { name: "", size: "m", voice: true, sound: true, goal: 3, onboarded: false, theme: "salvia" },
     sessions: [], custom: [], videos: {},
   };
   let db = load();
@@ -159,7 +159,7 @@
   function viewerBlock(ex) {
     const hasPhoto = PHOTOS.has(ex.id);
     return `<div class="viewer">
-      ${hasPhoto ? `<div class="seg viewer-tabs"><button class="on" data-act="vt" data-v="3d">🧍‍♀️ Muñeco 3D</button><button data-act="vt" data-v="foto">📷 Fotos reales</button></div>` : ""}
+      ${hasPhoto ? `<div class="seg viewer-tabs"><button class="on" data-act="vt" data-v="3d">Muñeco 3D</button><button data-act="vt" data-v="foto">Fotos reales</button></div>` : ""}
       ${figBox(ex.id, "big")}
       ${hasPhoto ? `<div class="photo-anim" hidden><img src="img/fotos/${ex.id}-0.jpg" alt="Posición inicial"><img class="b" src="img/fotos/${ex.id}-1.jpg" alt="Posición final"></div>` : ""}
       <div class="viewer-ctrl"><span class="small muted" data-hint>👆 Arrastra para girar el muñeco</span>
@@ -193,91 +193,87 @@
   /* =========================================================
      VISTAS
      ========================================================= */
-  const QUOTES = [
-    "Cada pequeño paso cuenta. Hoy también.",
-    "No hace falta hacerlo perfecto, solo hacerlo.",
-    "Tu cuerpo te agradece cada minuto que le dedicas.",
-    "Moverse es la mejor medicina que no se compra en la farmacia.",
-    "Despacio y con constancia se llega muy lejos.",
-    "Un rato para ti también es importante.",
-    "Las ganas no tienen edad.",
-    "Hoy es un buen día para sentirte bien.",
-    "Lo importante no es la velocidad, es no parar.",
-    "Cuidarte es el mejor regalo que te puedes hacer.",
-    "Cada sentadilla te hace un poco más independiente.",
-    "Más fuerte hoy que ayer, menos que mañana.",
-    "El mejor momento para empezar es ahora.",
-    "Respira, sonríe y a por ello.",
-  ];
+  const CAT_IMG = { full: "squat", piernas: "glute-bridge", espalda: "band-row", pecho: "floor-press", hombros: "lateral-raise",
+    brazos: "biceps-curl", core: "bird-dog", equilibrio: "single-leg", movilidad: "cat-cow" };
+  const ICON = {
+    play: `<svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor" stroke="none"/></svg>`,
+    check: `<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`,
+  };
 
   function viewHome() {
-    const now = new Date();
-    const h = now.getHours();
+    const now = new Date(), h = now.getHours();
     const hi = h < 14 ? "Buenos días" : h < 21 ? "Buenas tardes" : "Buenas noches";
-    const today = dateKey(now);
-    const todays = sessionsOn(today);
-    const planCat = WEEK_PLAN[now.getDay()];
-    const planned = planCat ? suggestedRoutine(planCat, now) : null;
-    const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 864e5);
-    const quote = QUOTES[dayOfYear % QUOTES.length];
-    const wd = now.toLocaleDateString("es-ES", { weekday: "short" }).replace(".", "");
-    const mo = now.toLocaleDateString("es-ES", { month: "short" }).replace(".", "");
+    const name = db.settings.name;
+    const dateStr = now.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" }).replace(/^./, (c) => c.toUpperCase());
+    const today = dateKey(now), todays = sessionsOn(today);
+    const planCat = WEEK_PLAN[now.getDay()], planned = planCat ? suggestedRoutine(planCat, now) : null;
 
-    let plan;
+    let card;
     if (todays.length) {
-      const mins = todays.reduce((a, s) => a + (s.minutes || 0), 0);
-      plan = `<div class="plan plan-done">
-        <div class="eyebrow-s">Hoy</div>
-        <h3>¡Hecho por hoy! 🎉</h3>
-        <p class="muted">${todays.map((s) => `${ACT[typeOf(s)].emoji} ${esc(s.name)}`).join(" · ")} · ${fmtMin(mins)}</p>
-        <div class="row"><button class="btn soft grow" data-act="add-activity">＋ Apuntar otra</button>
-          <a class="btn ghost" href="#/categoria/movilidad">🧘‍♀️ Estirar</a></div></div>`;
+      card = `<div class="tcard tcard-done">
+        <div class="today-art"><span class="today-icon">${ICON.check}</span>
+          <div><h3>¡Bien hecho${name ? `, ${esc(name)}` : ""}!</h3><p>Hoy ya te has movido.</p></div></div>
+        <div class="today-body">
+          <div class="today-done-list">${todays.map((s) => `<span><i>${ACT[typeOf(s)].emoji}</i>${esc(s.name)}<em>${fmtMin(s.minutes || 0)}</em></span>`).join("")}</div>
+          <div class="row"><button class="btn soft grow" data-act="add-activity">Apuntar otra</button>
+            <a class="btn ghost" href="#/categoria/movilidad">Estirar</a></div></div></div>`;
     } else if (planned) {
       const c = catOf(planned.cat);
-      plan = `<div class="plan" style="--c:${c.color}">
-        <div class="eyebrow-s">Tu plan de hoy · ${esc(c.name)}</div>
-        <h3>${esc(planned.name)}</h3>
-        <div class="plan-thumbs">${planned.items.map(([id]) => `<span>${mini(id)}</span>`).join("")}</div>
-        <p class="muted small" style="margin:0 0 14px">⏱ Unos ${estimate(withWarmup(planned))} minutos · ${planned.items.length} ejercicios · ${LEVELS[routineLevel(planned)]}</p>
-        <div class="row"><button class="btn grow" data-act="start" data-id="${planned.id}">▶ Empezar</button>
-          <a class="btn ghost" href="#/categoria/${c.id}">Elegir otra</a></div></div>`;
+      const imgs = planned.items.slice(0, 3).map(([id]) => `<img src="${miniSrc(id)}" alt="">`).join("");
+      card = `<div class="tcard">
+        <div class="today-art"><span class="badge-day">Hoy · ${esc(c.name)}</span>${imgs}</div>
+        <div class="today-body">
+          <h3>${esc(planned.name)}</h3>
+          <p>${planned.items.length} ejercicios · unos ${estimate(withWarmup(planned))} minutos · ${LEVELS[routineLevel(planned)].toLowerCase()}</p>
+          <div class="row"><button class="btn grow" data-act="start" data-id="${planned.id}">${ICON.play} Empezar</button>
+            <a class="btn ghost" href="#/rutina/${planned.id}">Ver</a></div></div></div>`;
     } else {
-      plan = `<div class="plan plan-rest">
-        <div class="eyebrow-s">Hoy toca descanso activo</div>
-        <h3>Un paseo te sentará genial 🚶‍♀️</h3>
-        <p class="muted">Moverse un poco también es descansar. Y si te apetece, unos estiramientos suaves.</p>
-        <div class="row"><button class="btn grow" data-act="add-activity" data-type="paseo">🚶‍♀️ Apuntar paseo</button>
-          <a class="btn ghost" href="#/categoria/movilidad">🧘‍♀️ Estirar</a></div></div>`;
+      card = `<div class="tcard tcard-rest">
+        <div class="today-art"><span class="today-icon">🚶‍♀️</span>
+          <div><h3>Día de descanso</h3><p>Un paseo o unos estiramientos suaves te sentarán genial.</p></div></div>
+        <div class="today-body"><div class="row"><button class="btn grow" data-act="add-activity" data-type="paseo">Apuntar paseo</button>
+          <a class="btn ghost" href="#/categoria/movilidad">Estirar</a></div></div></div>`;
     }
 
     const ws = weekStart();
     const week = DAYS_SHORT.map((d, i) => {
       const day = new Date(ws); day.setDate(ws.getDate() + i);
-      const k = dateKey(day);
-      const ts = [...new Set(sessionsOn(k).map(typeOf))];
-      return `<div class="day ${ts.length ? "done" : ""} ${k === today ? "today" : ""}">
-        <div class="dot">${ts.length ? ACT[ts[0]].emoji : day.getDate()}</div>${d}</div>`;
+      const k = dateKey(day), done = sessionsOn(k).length > 0;
+      return `<div class="day ${done ? "done" : ""} ${k === today ? "today" : ""}"><div class="dot">${done ? ICON.check : day.getDate()}</div>${d}</div>`;
     }).join("");
-    const nWeek = sessionsThisWeek().length, goal = db.settings.goal;
-    const goalMsg = nWeek >= goal ? "¡Objetivo de la semana cumplido! 🏆" : nWeek === 0 ? "Tu semana empieza con la primera actividad" : `${goal - nWeek === 1 ? "Te falta 1 actividad" : `Te faltan ${goal - nWeek} actividades`} para tu objetivo`;
+    const wk = sessionsThisWeek(), nWeek = wk.length, goal = db.settings.goal;
+    const minsWeek = wk.reduce((a, s) => a + (s.minutes || 0), 0);
+    const streak = weekStreak(), ach = achievementsState();
+
+    // Volver a hacer: últimas rutinas distintas
+    const seen = new Set(), recent = [];
+    [...db.sessions].sort((a, b) => b.date.localeCompare(a.date)).forEach((s) => {
+      const r = s.routineId && getRoutine(s.routineId);
+      if (r && !seen.has(r.id)) { seen.add(r.id); recent.push(r); }
+    });
+    const again = recent.length ? recent.slice(0, 4) : ["full-1", "bal-1", "mob-2"].map(getRoutine).filter(Boolean);
+    const againCards = again.map((r) => `<a class="mini-routine" href="#/rutina/${esc(r.id)}">
+        <span class="eyebrow-s">${esc(r.cat ? catOf(r.cat).name : "Mi rutina")}</span><h4>${esc(r.name)}</h4>
+        <div class="thumbs">${r.items.slice(0, 4).map(([id]) => `<span class="th">${mini(id)}</span>`).join("")}</div></a>`).join("");
 
     return {
-      title: "Mi Gimnasio",
+      title: "",
       html: `
-        <div class="home-head">
-          <div><p class="hello">${hi},</p><h2>${esc(db.settings.name || "¡hola!")} 👋</h2></div>
-          <div class="date-chip"><span>${esc(wd)}</span><b>${now.getDate()}</b><span>${esc(mo)}</span></div>
-        </div>
-        <div class="quote"><span class="qmark">“</span><p>${esc(quote)}</p><span class="qlabel">Frase del día</span></div>
-        <div class="section">${plan}</div>
+        <div class="home-head"><h2>${hi}${name ? `, ${esc(name)}` : ""}</h2><p>${esc(dateStr)}</p></div>
+        ${card}
         <div class="section card week-card">
-          <div class="goal-line"><strong>Tu semana</strong><span class="pill">${nWeek} / ${goal}</span></div>
+          <div class="week-top"><strong>Esta semana</strong><span class="pill">${nWeek} de ${goal}</span></div>
           <div class="week">${week}</div>
-          <p class="small muted center" style="margin:10px 0 0">${goalMsg}</p>
+          <div class="progress"><span style="width:${Math.min(100, (nWeek / goal) * 100)}%"></span></div>
+        </div>
+        <div class="section quick-stats">
+          <a class="qs" href="#/historial"><b>${minsWeek}<small> min</small></b><span>esta semana</span></a>
+          <a class="qs" href="#/historial"><b>${streak}<small> ${streak === 1 ? "sem." : "sem."}</small></b><span>de racha</span></a>
+          <a class="qs" href="#/logros"><b>${ach.got}<small> / ${ach.total}</small></b><span>logros</span></a>
         </div>
         <div class="section">
-          <h3 class="section-title">¿Qué te apetece trabajar?</h3>
-          ${categoryGrid()}
+          <h3 class="section-title">${recent.length ? "Volver a hacer" : "Para empezar"} <a href="#/rutinas">Ver todas</a></h3>
+          <div class="hscroll">${againCards}</div>
         </div>`,
     };
   }
@@ -285,8 +281,9 @@
   function categoryGrid() {
     return `<div class="cat-grid">${CATEGORIES.map((c) => {
       const n = ROUTINES.filter((r) => r.cat === c.id).length;
-      return `<a class="cat" href="#/categoria/${c.id}" style="--c:${c.color}">
-        <span class="em">${c.emoji}</span><strong>${esc(c.name)}</strong><span>${n} rutinas</span></a>`;
+      return `<a class="cat" href="#/categoria/${c.id}">
+        <span class="cat-img"><img src="${miniSrc(CAT_IMG[c.id])}" alt="" loading="lazy"></span>
+        <span class="cat-txt"><strong>${esc(c.name)}</strong><span class="n">${n} rutinas</span></span></a>`;
     }).join("")}</div>`;
   }
 
@@ -297,7 +294,7 @@
     return {
       title: "Entrenar",
       html: `
-        <div class="seg top-seg"><a href="#/rutinas" class="on">📋 Rutinas</a><a href="#/ejercicios" class="">🏋️‍♀️ Ejercicios</a></div>
+        <div class="seg top-seg"><a href="#/rutinas" class="on">Rutinas</a><a href="#/ejercicios" class="">Ejercicios</a></div>
         <p class="muted" style="margin-top:4px">Elige qué quieres trabajar y luego la rutina que más te apetezca. Todas tienen 4 o 5 ejercicios.</p>
         <div class="section" style="margin-top:12px">${categoryGrid()}</div>
         <div class="section">
@@ -315,7 +312,7 @@
     return {
       title: c.name, back: true,
       html: `
-        <div class="detail-head"><div class="tile lg" style="--c:${c.color}">${c.emoji}</div>
+        <div class="detail-head"><div class="tile lg">${mini(CAT_IMG[c.id])}</div>
           <div><h2>${esc(c.name)}</h2><p class="muted" style="margin:4px 0 0">${esc(c.desc)}</p></div></div>
         <p class="muted small">Elige la que más te apetezca hoy. Puedes ir cambiando para no aburrirte.</p>
         <div class="routine-list">${list.map(routineCard).join("")}</div>`,
@@ -336,7 +333,7 @@
     return {
       title: r.name, back: true, cta: true, parent: c ? `#/categoria/${c.id}` : "#/rutinas",
       html: `
-        <div class="detail-head"><div class="tile lg" style="--c:${esc(r.color || "#C4553A")}">${esc(r.emoji || "⭐")}</div>
+        <div class="detail-head"><div class="tile lg">${r.items[0] ? mini(r.items[0][0]) : ""}</div>
           <div>${c ? `<div class="eyebrow-s">${esc(c.name)}</div>` : ""}<h2>${esc(r.name)}</h2>${r.desc ? `<p class="muted" style="margin:4px 0 0">${esc(r.desc)}</p>` : ""}</div></div>
         <div class="tags">
           <span class="tag">⏱ ${estimate(withWarmup(r))} min</span>
@@ -356,7 +353,7 @@
             ? `<a class="btn ghost small" href="#/crear/${esc(r.id)}">✏️ Editar</a><button class="btn danger small" data-act="del-routine" data-id="${esc(r.id)}">🗑 Borrar</button>`
             : `<button class="btn ghost small" data-act="copy-routine" data-id="${esc(r.id)}">📋 Copiar y modificar</button>`}
         </div>
-        <div class="sticky-cta"><div><button class="btn block huge" data-act="start" data-id="${esc(r.id)}">▶ Empezar</button></div></div>`,
+        <div class="sticky-cta"><div><button class="btn block huge" data-act="start" data-id="${esc(r.id)}">${ICON.play} Empezar</button></div></div>`,
       after() {
         $("#warmSw")?.addEventListener("change", (e) => { db.settings.warmup = e.target.checked; save(); router(); });
       },
@@ -372,7 +369,7 @@
     return {
       title: "Entrenar",
       html: `
-        <div class="seg top-seg"><a href="#/rutinas" class="">📋 Rutinas</a><a href="#/ejercicios" class="on">🏋️‍♀️ Ejercicios</a></div>
+        <div class="seg top-seg"><a href="#/rutinas" class="">Rutinas</a><a href="#/ejercicios" class="on">Ejercicios</a></div>
         <input class="search" type="search" id="exSearch" placeholder="Buscar ejercicio…" value="${esc(exFilter.q)}" autocomplete="off" />
         <div class="chips" style="margin-top:12px">${zoneChips}</div>
         <div class="chips">${eqChips}</div>
@@ -413,7 +410,7 @@
         <div class="section"><h3 class="section-title">Cómo se hace</h3><div class="stack">${howToHTML(ex)}</div></div>
         <div class="section"><h3 class="section-title">Vídeo</h3>${videoBlock(ex)}</div>
         ${usedIn.length ? `<div class="section"><h3 class="section-title">Aparece en estas rutinas</h3><div class="routine-list">${usedIn.slice(0, 6).map(routineCard).join("")}</div></div>` : ""}
-        <div class="sticky-cta"><div><button class="btn block" data-act="try-ex" data-id="${ex.id}">▶ Probar este ejercicio</button></div></div>`,
+        <div class="sticky-cta"><div><button class="btn block" data-act="try-ex" data-id="${ex.id}">${ICON.play} Probar este ejercicio</button></div></div>`,
     };
   }
 
@@ -945,6 +942,8 @@
         <div class="stack">
           <div class="card stack">
             <label class="field"><span>¿Cómo te llamas?</span><input class="input" id="sName" maxlength="30" value="${esc(s.name)}" placeholder="Tu nombre"></label>
+            <div><strong>Color de la app</strong>
+              <div class="theme-pick">${THEMES.map(([k, t, c]) => `<button data-act="s-theme" data-v="${k}" class="${(s.theme || "salvia") === k ? "on" : ""}"><i style="background:${c}"></i>${t}</button>`).join("")}</div></div>
             <div><strong>Tamaño de la letra</strong>
               <div class="seg" style="margin-top:8px">${[["m", "Normal"], ["l", "Grande"], ["xl", "Muy grande"]].map(([k, t]) => `<button data-act="s-size" data-v="${k}" class="${s.size === k ? "on" : ""}">${t}</button>`).join("")}</div></div>
           </div>
@@ -978,7 +977,14 @@
       },
     };
   }
-  function applySize() { document.documentElement.dataset.size = db.settings.size; }
+  const THEMES = [["salvia", "Salvia", "#3E7C6A"], ["lavanda", "Lavanda", "#6B5FC7"], ["oceano", "Océano", "#2D7BA6"], ["terracota", "Terracota", "#B9654E"]];
+  function applyTheme() {
+    const t = THEMES.some(([k]) => k === db.settings.theme) ? db.settings.theme : "salvia";
+    document.documentElement.dataset.theme = t;
+    const bg = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", bg || "#F5F7F4");
+  }
+  function applySize() { document.documentElement.dataset.size = db.settings.size; applyTheme(); }
   function exportBackup() {
     const blob = new Blob([JSON.stringify(db, null, 2)], { type: "application/json" });
     const a = document.createElement("a");
@@ -1032,10 +1038,13 @@
       if (m) { view = fn(m[1]); tab = t; parentHash = view.parent || parent || "#/"; break; }
     }
     const main = $("#view");
+    main.classList.remove("enter");
     main.innerHTML = view.html;
+    void main.offsetWidth;
+    main.classList.add("enter");
     main.classList.toggle("has-cta", !!view.cta);
     $("#pageTitle").textContent = view.title;
-    document.title = view.title === "Mi Gimnasio" ? "Mi Gimnasio en Casa" : `${view.title} · Mi Gimnasio`;
+    document.title = view.title ? `${view.title} · Mi Gimnasio` : "Mi Gimnasio en Casa";
     $("#backBtn").hidden = !view.back;
     $$(".tabbar a").forEach((a) => a.classList.toggle("on", a.dataset.tab === tab));
     view.after?.();
@@ -1048,8 +1057,10 @@
   /* =========================================================
      HOJAS, AVISOS Y DIÁLOGOS
      ========================================================= */
+  let sheetT = 0;
   function openSheet(html, onMount) {
     const bd = $("#sheet");
+    clearTimeout(sheetT); bd.classList.remove("closing");
     const sh = $(".sheet", bd).cloneNode(false); // elemento nuevo: sin listeners anteriores
     $(".sheet", bd).replaceWith(sh);
     sh.innerHTML = html; bd.hidden = false;
@@ -1058,9 +1069,11 @@
     onMount?.(sh);
   }
   function closeSheet() {
-    const bd = $("#sheet"); if (bd.hidden) return;
-    bd.hidden = true; $(".sheet", bd).innerHTML = "";
-    if (!P) document.body.classList.remove("no-scroll");
+    const bd = $("#sheet"); if (bd.hidden || bd.classList.contains("closing")) return;
+    const done = () => { bd.hidden = true; bd.classList.remove("closing"); $(".sheet", bd).innerHTML = ""; if (!P) document.body.classList.remove("no-scroll"); };
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return done();
+    bd.classList.add("closing");
+    sheetT = setTimeout(done, 210);
   }
   $("#sheet").addEventListener("click", (e) => { if (e.target.id === "sheet") closeSheet(); });
   let toastT;
@@ -1322,10 +1335,10 @@
     if (ex.type === "time") {
       const rem = P.t.running ? P.t.endAt - Date.now() : P.t.remaining;
       main = ringHTML(rem, P.t.total);
-      action = `<button class="btn huge block ${P.t.running ? "ghost" : ""}" data-act="p-toggle">${P.t.running ? "⏸ Pausa" : P.t.started ? "▶ Continuar" : "▶ Empezar"}</button>`;
+      action = `<button class="btn huge block ${P.t.running ? "ghost" : ""}" data-act="p-toggle">${P.t.running ? "Pausa" : P.t.started ? `${ICON.play} Continuar` : `${ICON.play} Empezar`}</button>`;
     } else {
       main = `<div class="p-big">${st.amt}<small>repeticiones${ex.side ? " con cada lado" : ""}</small></div>`;
-      action = `<button class="btn huge block green" data-act="p-next">✓ ¡Hecho!</button>`;
+      action = `<button class="btn huge block green" data-act="p-next">${ICON.check} ¡Hecho!</button>`;
     }
     const label = st.i < P.warm ? `Calentamiento ${st.i + 1} de ${P.warm}` : `Ejercicio ${st.i - P.warm + 1} de ${P.total - P.warm}`;
     el.innerHTML = `${playerTop(label)}
@@ -1502,6 +1515,7 @@
       db.sessions = db.sessions.filter((s) => s.id !== el.dataset.id); save(); router();
     }, true),
     // ajustes
+    "s-theme": (el) => { db.settings.theme = el.dataset.v; save(); applyTheme(); $$("[data-act='s-theme']").forEach((b) => b.classList.toggle("on", b === el)); },
     "s-size": (el) => { db.settings.size = el.dataset.v; save(); applySize(); $$("[data-act='s-size']").forEach((b) => b.classList.toggle("on", b === el)); },
     "s-goal": (el) => { db.settings.goal = Math.max(1, Math.min(7, db.settings.goal + +el.dataset.d)); save(); $("#sGoal").textContent = db.settings.goal; },
     "export": () => exportBackup(),
@@ -1526,7 +1540,11 @@
     const el = e.target.closest("[data-act]");
     if (!el || el.disabled) return;
     const fn = ACTIONS[el.dataset.act];
-    if (fn) { e.preventDefault(); fn(el); }
+    if (fn) {
+      e.preventDefault();
+      if (["start", "p-next", "p-save", "add-activity", "try-ex"].includes(el.dataset.act)) navigator.vibrate?.(8);
+      fn(el);
+    }
   });
 
   /* =========================================================
