@@ -593,3 +593,24 @@ body[data-sec="logros"] { --primary: #D6922A; --primary-strong: #A86E14; --prima
 .train-card .today-body h3 { margin-top: 6px; margin-bottom: 14px; }
 .today-art img { object-fit: contain; transform: none; margin: 0 -16px; height: 160px; width: 160px; }
 .today-art img:nth-child(3) { height: 172px; width: 172px; }
+
+/* ===================== Inicio: rutina grande + apuntar compacto ===================== */
+.hero-train .today-art { height: 220px; }
+.hero-train .today-art img { height: 190px; width: 190px; margin: 0 -26px; }
+.hero-train .today-art img:nth-child(3) { height: 206px; width: 206px; }
+.hero-train .today-body h3 { font-size: 1.6rem; margin: 6px 0 4px; }
+.hero-train .today-body p { margin: 0 0 16px; }
+.link-other { display: block; text-align: center; margin-top: 12px; font-weight: 700; color: var(--primary); font-size: .95rem; }
+.quick-log { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 14px 12px; box-shadow: var(--shadow-1); }
+.ql-top { display: flex; flex-direction: column; gap: 2px; }
+.ql-top strong { font-size: 1rem; }
+.ql-done { display: inline-flex; align-items: center; gap: 6px; font-size: .84rem; font-weight: 700; color: var(--good); }
+.ql-done svg { width: 16px; height: 16px; stroke-width: 3; }
+.ql-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; margin-top: 12px; }
+.ql-btn { border: 0; background: none; padding: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--ink-2); }
+.ql-btn span { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; font-size: 1.45rem; background: color-mix(in srgb, var(--c) 15%, #fff); transition: transform .15s var(--ease); }
+.ql-btn small { font-size: .68rem; font-weight: 700; }
+.ql-btn:active span { transform: scale(.88); }
+.hero-train .today-art { gap: 2px; padding: 0 10px; }
+.hero-train .today-art img { height: 196px; width: 31%; max-width: 150px; object-fit: contain; margin: 0; }
+.hero-train .today-art img:nth-child(3) { height: 210px; width: 34%; max-width: 165px; }

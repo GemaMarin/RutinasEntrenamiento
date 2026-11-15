@@ -334,35 +334,30 @@
     const today = dateKey(now), todays = sessionsOn(today);
     const planCat = WEEK_PLAN[now.getDay()], planned = planCat ? suggestedRoutine(planCat, now) : null;
 
-    // 1) Registrar actividad (lo primero)
-    const PLUS = `<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>`;
-    const doneMins = todays.reduce((acc, x) => acc + (x.minutes || 0), 0);
-    const doneLine = todays.length
-      ? `<div class="done-strip"><span class="ds-ic">${ICON.check}</span><span>Hoy ya has hecho <b>${todays.map((x) => esc(x.name)).join(", ")}</b> · ${fmtMin(doneMins)}</span></div>` : "";
-    const logCard = `<div class="log-card">
-      <div class="lc-head">
-        <div><h3>Registrar actividad</h3><p>¿Qué has hecho hoy? Toca y apúntalo.</p></div>
-        <button class="lc-plus" data-act="add-activity" aria-label="Registrar nueva actividad">${PLUS}</button>
-      </div>
-      <div class="lc-grid">${ACT_TYPES.map((t) => `<button class="lc-type" data-act="add-activity" data-type="${t.id}" style="--c:${t.color}">
-        <span class="em">${t.emoji}</span>${t.name}</button>`).join("")}</div>
-      ${doneLine}
-    </div>`;
-
-    // 2) Entrenar con la app
+    // 1) Lo grande: la rutina de hoy
     const sugg = planned || suggestedRoutine("movilidad", now);
     const sc = catOf(sugg.cat);
     const imgs = sugg.items.slice(0, 3).map(([id]) => `<img src="${miniSrc(id)}" alt="">`).join("");
-    const trainCard = `<div class="tcard train-card">
+    const trainCard = `<div class="tcard train-card hero-train">
       <div class="today-art" style="${catStyle(sc)}"><span class="badge-day">${planned ? "✨ Tu rutina de hoy" : "🌿 Hoy, algo suave"}</span>${imgs}</div>
       <div class="today-body">
         <span class="eyebrow-s">${sc.emoji} ${esc(sc.name)} · ${routineMins(sugg)} min · ${sugg.items.length} ejercicios</span>
         <h3>${esc(sugg.name)}</h3>
-        <div class="row"><button class="btn grow" data-act="start" data-id="${sugg.id}">${ICON.play} Empezar</button>
-          <a class="btn ghost" href="#/rutina/${sugg.id}">Ver</a></div>
+        ${sugg.desc ? `<p>${esc(sugg.desc)}</p>` : ""}
+        <div class="row"><button class="btn grow huge" data-act="start" data-id="${sugg.id}">${ICON.play} Empezar</button>
+          <a class="btn ghost huge" href="#/rutina/${sugg.id}">Ver</a></div>
+        <a class="link-other" href="#/rutinas">Elegir otra rutina ›</a>
       </div></div>`;
-    const card = `${logCard}
-      <div class="section"><h3 class="section-title">Entrenar con la app <a href="#/rutinas">Todas las rutinas</a></h3>${trainCard}</div>`;
+
+    // 2) Lo pequeño: apuntar otra actividad en un toque
+    const doneMins = todays.reduce((acc, x) => acc + (x.minutes || 0), 0);
+    const quickLog = `<div class="quick-log">
+      <div class="ql-top"><strong>¿Has hecho otra actividad?</strong>
+        ${todays.length ? `<span class="ql-done">${ICON.check} Hoy: ${todays.map((x) => esc(x.name)).join(", ")} · ${fmtMin(doneMins)}</span>` : `<span class="small muted">Apúntala en un toque</span>`}</div>
+      <div class="ql-row">${ACT_TYPES.map((t) => `<button class="ql-btn" data-act="add-activity" data-type="${t.id}" style="--c:${t.color}" aria-label="Apuntar ${t.name}">
+        <span>${t.emoji}</span><small>${t.name}</small></button>`).join("")}</div>
+    </div>`;
+    const card = `${trainCard}<div class="section">${quickLog}</div>`;
 
     const ws = weekStart();
     const week = DAYS_SHORT.map((d, i) => {
