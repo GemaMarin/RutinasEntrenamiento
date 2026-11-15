@@ -331,77 +331,51 @@
     const hi = h < 14 ? "Buenos días" : h < 21 ? "Buenas tardes" : "Buenas noches";
     const name = db.settings.name;
     const dateStr = now.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" }).replace(/^./, (c) => c.toUpperCase());
-    const today = dateKey(now), todays = sessionsOn(today);
-    const planCat = WEEK_PLAN[now.getDay()], planned = planCat ? suggestedRoutine(planCat, now) : null;
-
-    // 1) Lo grande: la rutina de hoy
-    const sugg = planned || suggestedRoutine("movilidad", now);
-    const sc = catOf(sugg.cat);
-    const imgs = sugg.items.slice(0, 3).map(([id]) => `<img src="${miniSrc(id)}" alt="">`).join("");
-    const trainCard = `<div class="tcard train-card hero-train">
-      <div class="today-art" style="${catStyle(sc)}"><span class="badge-day">${planned ? "✨ Tu rutina de hoy" : "🌿 Hoy, algo suave"}</span>${imgs}</div>
-      <div class="today-body">
-        <span class="eyebrow-s">${sc.emoji} ${esc(sc.name)} · ${routineMins(sugg)} min · ${sugg.items.length} ejercicios</span>
-        <h3>${esc(sugg.name)}</h3>
-        ${sugg.desc ? `<p>${esc(sugg.desc)}</p>` : ""}
-        <div class="row"><button class="btn grow huge" data-act="start" data-id="${sugg.id}">${ICON.play} Empezar</button>
-          <a class="btn ghost huge" href="#/rutina/${sugg.id}">Ver</a></div>
-        <a class="link-other" href="#/rutinas">Elegir otra rutina ›</a>
-      </div></div>`;
-
-    // 2) Lo pequeño: apuntar otra actividad en un toque
-    const doneMins = todays.reduce((acc, x) => acc + (x.minutes || 0), 0);
-    const quickLog = `<div class="quick-log">
-      <div class="ql-top"><strong>¿Has hecho otra actividad?</strong>
-        ${todays.length ? `<span class="ql-done">${ICON.check} Hoy: ${todays.map((x) => esc(x.name)).join(", ")} · ${fmtMin(doneMins)}</span>` : `<span class="small muted">Apúntala en un toque</span>`}</div>
-      <div class="ql-row">${ACT_TYPES.map((t) => `<button class="ql-btn" data-act="add-activity" data-type="${t.id}" style="--c:${t.color}" aria-label="Apuntar ${t.name}">
-        <span>${t.emoji}</span><small>${t.name}</small></button>`).join("")}</div>
-    </div>`;
-    const card = `${trainCard}<div class="section">${quickLog}</div>`;
-
-    const ws = weekStart();
-    const week = DAYS_SHORT.map((d, i) => {
-      const day = new Date(ws); day.setDate(ws.getDate() + i);
-      const k = dateKey(day), done = sessionsOn(k).length > 0;
-      return `<div class="day ${done ? "done" : ""} ${k === today ? "today" : ""}"><div class="dot">${done ? ICON.check : day.getDate()}</div>${d}</div>`;
-    }).join("");
+    const today = dateKey(now);
     const wk = sessionsThisWeek(), nWeek = wk.length, goal = db.settings.goal;
     const minsWeek = wk.reduce((a, s) => a + (s.minutes || 0), 0);
     const streak = weekStreak(), ach = achievementsState();
-
-    // Volver a hacer: últimas rutinas distintas
+    const favs = favRoutines();
     const seen = new Set(), recent = [];
     [...db.sessions].sort((a, b) => b.date.localeCompare(a.date)).forEach((s) => {
       const r = s.routineId && getRoutine(s.routineId);
       if (r && !seen.has(r.id)) { seen.add(r.id); recent.push(r); }
     });
-    const again = recent.length ? recent.slice(0, 4) : ["full-1", "bal-1", "mob-2"].map(getRoutine).filter(Boolean);
-    const againCards = again.map(miniRoutineCard).join("");
-    const favs = favRoutines();
-
+    const ws = weekStart();
+    const weekDots = (cls = "") => `<div class="week ${cls}">${DAYS_SHORT.map((d, i) => {
+      const day = new Date(ws); day.setDate(ws.getDate() + i);
+      const k = dateKey(day), done = sessionsOn(k).length > 0;
+      return `<div class="day ${done ? "done" : ""} ${k === today ? "today" : ""}"><div class="dot">${done ? ICON.check : day.getDate()}</div>${d}</div>`;
+    }).join("")}</div>`;
+    const head = `<div class="home-head"><h2>${hi}${name ? `, ${esc(name)}` : ""}</h2><p>${esc(dateStr)}</p></div>`;
+    const carousel = () => {
+      const list = favs.length ? favs : recent.length ? recent.slice(0, 4) : ["full-1", "bal-1", "mob-2"].map(getRoutine).filter(Boolean);
+      const title = favs.length ? "❤️ Tus favoritas" : recent.length ? "Volver a hacer" : "Para empezar";
+      return `<div class="section"><h3 class="section-title">${title} <a href="#/rutinas">Ver todas</a></h3>
+        <div class="hscroll">${list.map(miniRoutineCard).join("")}</div></div>`;
+    };
+    /* ---------- Tu progreso ---------- */
+    const pct = Math.min(1, nWeek / goal), R = 42, C = 2 * Math.PI * R;
+    const last = [...db.sessions].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 2);
     return {
       title: "",
-      html: `
-        <div class="home-head"><h2>${hi}${name ? `, ${esc(name)}` : ""}</h2><p>${esc(dateStr)}</p></div>
-        ${card}
-        <div class="section card week-card">
-          <div class="week-top"><strong>Esta semana</strong><span class="pill">${nWeek} de ${goal}</span></div>
-          <div class="week">${week}</div>
-          <div class="progress"><span style="width:${Math.min(100, (nWeek / goal) * 100)}%"></span></div>
+      html: `${head}
+        <div class="prog-hero">
+          <div class="ph-top">
+            <div class="ph-ring"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="${R}" class="bg"/><circle cx="50" cy="50" r="${R}" class="fg" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - pct)}"/></svg>
+              <div><b>${nWeek}</b><span>de ${goal}</span></div></div>
+            <div class="ph-txt"><span class="eyebrow-s">Esta semana</span>
+              <strong>${nWeek >= goal ? "¡Objetivo cumplido! 🏆" : nWeek === 0 ? "¡A por la primera!" : `${goal - nWeek === 1 ? "Te queda 1" : `Te quedan ${goal - nWeek}`} para tu objetivo`}</strong>
+              <span class="ph-meta">⏱ ${minsWeek} min · 🔥 ${streak} ${streak === 1 ? "semana" : "semanas"}</span></div>
+          </div>
+          ${weekDots("on-hero")}
         </div>
-        <div class="section quick-stats">
-          <a class="qs qs-a" href="#/historial"><b>${minsWeek}<small> min</small></b><span>esta semana</span></a>
-          <a class="qs qs-b" href="#/historial"><b>${streak}<small> ${streak === 1 ? "sem." : "sem."}</small></b><span>de racha</span></a>
-          <a class="qs qs-c" href="#/logros"><b>${ach.got}<small> / ${ach.total}</small></b><span>logros</span></a>
+        <div class="section duo">
+          <a class="duo-card duo-train" href="#/rutinas"><img src="${miniSrc("squat")}" alt=""><strong>Entrenar</strong><span>${ROUTINES.length} rutinas</span></a>
+          <a class="duo-card duo-ach" href="#/logros"><span class="duo-medal">🏅</span><strong>Mis logros</strong><span>${ach.got} de ${ach.total}</span></a>
         </div>
-        ${favs.length ? `<div class="section">
-          <h3 class="section-title">❤️ Tus favoritas <a href="#/rutinas">Ver todas</a></h3>
-          <div class="hscroll">${favs.map(miniRoutineCard).join("")}</div>
-        </div>` : ""}
-        <div class="section">
-          <h3 class="section-title">${recent.length ? "Volver a hacer" : "Para empezar"} <a href="#/rutinas">Ver todas</a></h3>
-          <div class="hscroll">${againCards}</div>
-        </div>`,
+        ${carousel()}
+        ${last.length ? `<div class="section"><h3 class="section-title">Lo último <a href="#/historial">Diario</a></h3><div class="stack">${last.map((s) => logItem(s, false)).join("")}</div></div>` : ""}`,
     };
   }
 
