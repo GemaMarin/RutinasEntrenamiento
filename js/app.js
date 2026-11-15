@@ -193,72 +193,92 @@
   /* =========================================================
      VISTAS
      ========================================================= */
+  const QUOTES = [
+    "Cada pequeño paso cuenta. Hoy también.",
+    "No hace falta hacerlo perfecto, solo hacerlo.",
+    "Tu cuerpo te agradece cada minuto que le dedicas.",
+    "Moverse es la mejor medicina que no se compra en la farmacia.",
+    "Despacio y con constancia se llega muy lejos.",
+    "Un rato para ti también es importante.",
+    "Las ganas no tienen edad.",
+    "Hoy es un buen día para sentirte bien.",
+    "Lo importante no es la velocidad, es no parar.",
+    "Cuidarte es el mejor regalo que te puedes hacer.",
+    "Cada sentadilla te hace un poco más independiente.",
+    "Más fuerte hoy que ayer, menos que mañana.",
+    "El mejor momento para empezar es ahora.",
+    "Respira, sonríe y a por ello.",
+  ];
+
   function viewHome() {
     const now = new Date();
     const h = now.getHours();
     const hi = h < 14 ? "Buenos días" : h < 21 ? "Buenas tardes" : "Buenas noches";
-    const name = db.settings.name ? `, ${esc(db.settings.name)}` : "";
     const today = dateKey(now);
-    const doneToday = sessionsOn(today).length > 0;
+    const todays = sessionsOn(today);
     const planCat = WEEK_PLAN[now.getDay()];
     const planned = planCat ? suggestedRoutine(planCat, now) : null;
-    const dateStr = now.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
-    const dateNice = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
+    const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 864e5);
+    const quote = QUOTES[dayOfYear % QUOTES.length];
+    const wd = now.toLocaleDateString("es-ES", { weekday: "short" }).replace(".", "");
+    const mo = now.toLocaleDateString("es-ES", { month: "short" }).replace(".", "");
 
-    let hero;
-    if (doneToday) {
-      const relax = suggestedRoutine("movilidad", now);
-      hero = `<div class="hero rest"><div class="eyebrow">Hoy</div><h2>¡Hecho por hoy! 🎉</h2>
-        <p>Muy bien${name}. Descansa, bebe agua y, si te apetece, sal a dar un paseo.</p>
-        <a class="btn white" href="#/rutina/${relax.id}">🧘‍♀️ Unos estiramientos suaves</a></div>`;
+    let plan;
+    if (todays.length) {
+      const mins = todays.reduce((a, s) => a + (s.minutes || 0), 0);
+      plan = `<div class="plan plan-done">
+        <div class="eyebrow-s">Hoy</div>
+        <h3>¡Hecho por hoy! 🎉</h3>
+        <p class="muted">${todays.map((s) => `${ACT[typeOf(s)].emoji} ${esc(s.name)}`).join(" · ")} · ${fmtMin(mins)}</p>
+        <div class="row"><button class="btn soft grow" data-act="add-activity">＋ Apuntar otra</button>
+          <a class="btn ghost" href="#/categoria/movilidad">🧘‍♀️ Estirar</a></div></div>`;
     } else if (planned) {
       const c = catOf(planned.cat);
-      hero = `<div class="hero"><div class="eyebrow">Te propongo para hoy · ${esc(c.name)}</div>
-        <h2>${esc(c.emoji)} ${esc(planned.name)}</h2>
-        <div class="hero-thumbs">${planned.items.map(([id]) => `<span>${mini(id)}</span>`).join("")}</div>
-        <p>⏱ Unos ${estimate(withWarmup(planned))} minutos · ${planned.items.length} ejercicios</p>
-        <div class="row"><button class="btn white" data-act="start" data-id="${planned.id}">▶ Empezar ahora</button>
-        <a class="btn soft small" style="background:rgba(255,255,255,.18);color:#fff" href="#/categoria/${c.id}">Otra de ${esc(c.name.toLowerCase())}</a></div></div>`;
+      plan = `<div class="plan" style="--c:${c.color}">
+        <div class="eyebrow-s">Tu plan de hoy · ${esc(c.name)}</div>
+        <h3>${esc(planned.name)}</h3>
+        <div class="plan-thumbs">${planned.items.map(([id]) => `<span>${mini(id)}</span>`).join("")}</div>
+        <p class="muted small" style="margin:0 0 14px">⏱ Unos ${estimate(withWarmup(planned))} minutos · ${planned.items.length} ejercicios · ${LEVELS[routineLevel(planned)]}</p>
+        <div class="row"><button class="btn grow" data-act="start" data-id="${planned.id}">▶ Empezar</button>
+          <a class="btn ghost" href="#/categoria/${c.id}">Elegir otra</a></div></div>`;
     } else {
-      hero = `<div class="hero rest"><div class="eyebrow">Hoy toca</div><h2>Descanso activo 🚶‍♀️</h2>
-        <p>Un paseo de 30 minutos es perfecto. Cuando vuelvas, apúntalo en tu diario.</p>
-        <button class="btn white" data-act="add-manual">✍️ Apuntar una actividad</button></div>`;
+      plan = `<div class="plan plan-rest">
+        <div class="eyebrow-s">Hoy toca descanso activo</div>
+        <h3>Un paseo te sentará genial 🚶‍♀️</h3>
+        <p class="muted">Moverse un poco también es descansar. Y si te apetece, unos estiramientos suaves.</p>
+        <div class="row"><button class="btn grow" data-act="add-activity" data-type="paseo">🚶‍♀️ Apuntar paseo</button>
+          <a class="btn ghost" href="#/categoria/movilidad">🧘‍♀️ Estirar</a></div></div>`;
     }
 
     const ws = weekStart();
     const week = DAYS_SHORT.map((d, i) => {
       const day = new Date(ws); day.setDate(ws.getDate() + i);
       const k = dateKey(day);
-      const done = sessionsOn(k).length > 0;
-      return `<div class="day ${done ? "done" : ""} ${k === today ? "today" : ""}"><div class="dot">✓</div>${d}</div>`;
+      const ts = [...new Set(sessionsOn(k).map(typeOf))];
+      return `<div class="day ${ts.length ? "done" : ""} ${k === today ? "today" : ""}">
+        <div class="dot">${ts.length ? ACT[ts[0]].emoji : day.getDate()}</div>${d}</div>`;
     }).join("");
-    const nWeek = sessionsThisWeek().length;
-    const goal = db.settings.goal;
-    const pct = Math.min(100, Math.round((nWeek / goal) * 100));
-    const goalMsg = nWeek >= goal ? "¡Objetivo cumplido! 🏆" : nWeek === 0 ? "¡Vamos a por la primera!" : `Te ${goal - nWeek === 1 ? "falta 1 sesión" : `faltan ${goal - nWeek} sesiones`}`;
-
-    const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 864e5);
-    const tip = TIPS[dayOfYear % TIPS.length];
-    const last = [...db.sessions].sort((a, b) => b.date.localeCompare(a.date))[0];
+    const nWeek = sessionsThisWeek().length, goal = db.settings.goal;
+    const goalMsg = nWeek >= goal ? "¡Objetivo de la semana cumplido! 🏆" : nWeek === 0 ? "Tu semana empieza con la primera actividad" : `${goal - nWeek === 1 ? "Te falta 1 actividad" : `Te faltan ${goal - nWeek} actividades`} para tu objetivo`;
 
     return {
       title: "Mi Gimnasio",
       html: `
-        <div class="greeting"><h2>${hi}${name} 👋</h2><p>${esc(dateNice)}</p></div>
-        ${hero}
-        <div class="section card">
-          <div class="goal-line"><strong>Esta semana</strong><span class="muted small">${nWeek} de ${goal} sesiones</span></div>
-          <div class="progress"><span style="width:${pct}%"></span></div>
+        <div class="home-head">
+          <div><p class="hello">${hi},</p><h2>${esc(db.settings.name || "¡hola!")} 👋</h2></div>
+          <div class="date-chip"><span>${esc(wd)}</span><b>${now.getDate()}</b><span>${esc(mo)}</span></div>
+        </div>
+        <div class="quote"><span class="qmark">“</span><p>${esc(quote)}</p><span class="qlabel">Frase del día</span></div>
+        <div class="section">${plan}</div>
+        <div class="section card week-card">
+          <div class="goal-line"><strong>Tu semana</strong><span class="pill">${nWeek} / ${goal}</span></div>
           <div class="week">${week}</div>
-          <p class="small muted center" style="margin:12px 0 0">${goalMsg}</p>
+          <p class="small muted center" style="margin:10px 0 0">${goalMsg}</p>
         </div>
         <div class="section">
-          <h3 class="section-title">¿Qué te apetece trabajar hoy?</h3>
+          <h3 class="section-title">¿Qué te apetece trabajar?</h3>
           ${categoryGrid()}
-        </div>
-        <div class="section callout tip"><span class="ic">💡</span><p><strong>Consejo del día:</strong> ${esc(tip)}</p></div>
-        ${last ? `<div class="section"><h3 class="section-title">Tu última sesión <a href="#/historial">Diario</a></h3>${logItem(last, false)}</div>` : ""}
-      `,
+        </div>`,
     };
   }
 
@@ -275,8 +295,9 @@
       ? `<div class="routine-list">${db.custom.map(routineCard).join("")}</div>`
       : `<div class="card center"><p class="muted" style="margin:0">Aún no has creado ninguna rutina propia.</p></div>`;
     return {
-      title: "Rutinas",
+      title: "Entrenar",
       html: `
+        <div class="seg top-seg"><a href="#/rutinas" class="on">📋 Rutinas</a><a href="#/ejercicios" class="">🏋️‍♀️ Ejercicios</a></div>
         <p class="muted" style="margin-top:4px">Elige qué quieres trabajar y luego la rutina que más te apetezca. Todas tienen 4 o 5 ejercicios.</p>
         <div class="section" style="margin-top:12px">${categoryGrid()}</div>
         <div class="section">
@@ -349,8 +370,9 @@
     const eqChips = [["", "Todo el material"], ...Object.entries(EQUIP).map(([k, e]) => [k, `${e.emoji} ${e.name}`])]
       .map(([k, t]) => `<button class="chip ${exFilter.equip === k ? "on" : ""}" data-act="f-equip" data-v="${k}">${t}</button>`).join("");
     return {
-      title: "Ejercicios",
+      title: "Entrenar",
       html: `
+        <div class="seg top-seg"><a href="#/rutinas" class="">📋 Rutinas</a><a href="#/ejercicios" class="on">🏋️‍♀️ Ejercicios</a></div>
         <input class="search" type="search" id="exSearch" placeholder="Buscar ejercicio…" value="${esc(exFilter.q)}" autocomplete="off" />
         <div class="chips" style="margin-top:12px">${zoneChips}</div>
         <div class="chips">${eqChips}</div>
@@ -514,10 +536,10 @@
   }
 
   /* ----- Formulario para apuntar / editar una actividad ----- */
-  function openActivitySheet(s0 = null) {
+  function openActivitySheet(s0 = null, preset = null) {
     const isWorkout = !!s0?.routineId;
     const st = {
-      type: s0 ? typeOf(s0) : "gym",
+      type: s0 ? typeOf(s0) : (preset && ACT[preset] ? preset : "gym"),
       minutes: s0?.minutes || 30, feeling: s0?.feeling || 3, intensity: s0?.intensity || 2,
       areas: new Set(s0 ? areasOf(s0) : []), km: s0?.km || 0,
     };
@@ -579,6 +601,7 @@
       });
       $("#aDate", sh).addEventListener("change", (e) => $$("[data-ad]", sh).forEach((b) => b.classList.toggle("on", b.dataset.ad === e.target.value)));
       $("#aSave", sh).addEventListener("click", () => {
+        const before = earnedIds();
         const t = ACT[st.type];
         const dk = $("#aDate", sh).value || today;
         let date;
@@ -598,6 +621,7 @@
         save(); closeSheet();
         toast(s0 ? "💾 Cambios guardados" : `${t.emoji} ¡Apuntado en tu diario!`);
         router();
+        celebrateNew(before);
       });
       $("#aDel", sh)?.addEventListener("click", () => confirmSheet("¿Borrar esta actividad?", "Se quitará de tu diario.", "Sí, borrar", () => {
         db.sessions = db.sessions.filter((x) => x.id !== s0.id); save(); toast("Actividad borrada"); router();
@@ -607,10 +631,11 @@
 
   /* ----- Diario ----- */
   let histMonth = new Date(); histMonth.setDate(1);
+  let showAllLogs = false;
   function logItem(s, canEdit = true) {
     const t = ACT[typeOf(s)], d = new Date(s.date), f = FEELINGS[(s.feeling || 3) - 1];
     const areas = typeOf(s) === "gym" ? areasOf(s).map((a) => catOf(a)).filter(Boolean) : [];
-    const extra = [fmtMin(s.minutes || 0), s.km ? `${s.km.toLocaleString("es-ES")} km` : "", s.intensity ? INTENSITY[s.intensity - 1][1] : ""].filter(Boolean).join(" · ");
+    const extra = [fmtMin(s.minutes || 0), s.km ? `${s.km.toLocaleString("es-ES")} km` : ""].filter(Boolean).join(" · ");
     const tag = canEdit ? "button" : "div";
     return `<${tag} class="log-item" ${canEdit ? `data-act="edit-session" data-id="${esc(s.id)}" aria-label="Editar ${esc(s.name || t.name)}"` : ""} style="--c:${t.color}">
       <span class="log-ic">${t.emoji}</span>
@@ -621,150 +646,45 @@
       <span class="e" title="${f.t}">${f.e}</span></${tag}>`;
   }
 
-  /* Escala "bonita" para los ejes */
-  function niceMax(v) {
-    const steps = [15, 30, 60, 90, 120, 180, 240, 300, 600];
-    const step = steps.find((s) => v / s <= 4) || 600;
-    return { top: Math.max(step, Math.ceil(v / step) * step), step };
-  }
-  const roundTop = (x, y, w, h, r) => {
-    r = Math.min(r, w / 2, h);
-    return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`;
-  };
-
-  /* Columnas apiladas: minutos por semana (últimas 8) */
+  /* Semana a semana: una sola serie, sencilla */
   function weeklyData() {
     const w0 = weekStart(), weeks = [];
     for (let i = 7; i >= 0; i--) {
       const s = new Date(w0); s.setDate(w0.getDate() - 7 * i);
       const e = new Date(s); e.setDate(s.getDate() + 7);
-      weeks.push({ s, e, by: {}, total: 0, n: 0 });
+      weeks.push({ s, e, total: 0, n: 0 });
     }
     db.sessions.forEach((x) => {
       const d = new Date(x.date), w = weeks.find((w) => d >= w.s && d < w.e);
-      if (!w) return;
-      const t = typeOf(x);
-      w.by[t] = (w.by[t] || 0) + (x.minutes || 0); w.total += x.minutes || 0; w.n++;
+      if (w) { w.total += x.minutes || 0; w.n++; }
     });
     return weeks;
   }
-  function weeklyChart(sel = 7) {
+  function weeklyBars(sel = 7) {
     const weeks = weeklyData();
-    if (!weeks.some((w) => w.total)) return `<div class="empty small-empty">Aún no hay actividad en las últimas semanas.</div>`;
-    const W = 340, H = 190, L = 34, R = 6, T = 18, Bm = 26;
-    const pw = W - L - R, ph = H - T - Bm, cw = pw / weeks.length, bw = Math.min(26, cw * 0.62);
-    const { top, step } = niceMax(Math.max(...weeks.map((w) => w.total)));
-    const y = (v) => T + ph - (v / top) * ph;
-    let grid = "";
-    for (let v = 0; v <= top; v += step) {
-      grid += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" class="${v ? "grid" : "base"}"/>
-        <text x="${L - 6}" y="${y(v) + 3.5}" class="tick" text-anchor="end">${v}</text>`;
-    }
-    const cols = weeks.map((w, i) => {
-      const x = L + i * cw + (cw - bw) / 2;
-      let acc = 0, segs = "", seps = "";
-      ACT_TYPES.forEach((t) => {
-        const v = w.by[t.id]; if (!v) return;
-        const y1 = y(acc + v), h = y(acc) - y1;
-        segs += `<rect x="${x}" y="${y1}" width="${bw}" height="${h}" fill="${t.color}"/>`;
-        if (acc > 0) seps += `<rect x="${x}" y="${y(acc) - 1}" width="${bw}" height="2" fill="#fff"/>`;
-        acc += v;
-      });
-      const hTot = y(0) - y(w.total);
-      const label = i === 7 ? "Esta" : `${w.s.getDate()}/${w.s.getMonth() + 1}`;
-      return `<g class="wk ${i === sel ? "sel" : ""}" data-wk="${i}" role="button" tabindex="0" aria-label="Semana del ${shortDate(w.s)}: ${w.total} minutos">
-        <rect class="hit" x="${L + i * cw}" y="${T}" width="${cw}" height="${ph + Bm}"/>
-        ${w.total ? `<clipPath id="wc${i}"><path d="${roundTop(x, y(w.total), bw, hTot, 4)}"/></clipPath><g clip-path="url(#wc${i})">${segs}${seps}</g>` : ""}
-        ${i === sel && w.total ? `<text class="cap" x="${x + bw / 2}" y="${y(w.total) - 5}" text-anchor="middle">${w.total}</text>` : ""}
-        <text class="xl ${i === 7 ? "now" : ""}" x="${x + bw / 2}" y="${H - 8}" text-anchor="middle">${label}</text></g>`;
+    if (!weeks.some((w) => w.total)) return `<p class="small muted center" style="margin:8px 0">Aún no hay actividad en las últimas semanas.</p>`;
+    const W = 320, H = 150, T = 22, Bm = 24, gap = 10;
+    const bw = (W - gap * 7) / 8, max = Math.max(...weeks.map((w) => w.total));
+    const best = weeks.findIndex((w) => w.total === max);
+    const ph = H - T - Bm;
+    const bars = weeks.map((w, i) => {
+      const x = i * (bw + gap), h = w.total ? Math.max(6, (w.total / max) * ph) : 0, y = T + ph - h;
+      const lab = i === 7 ? "Esta" : `${w.s.getDate()}/${w.s.getMonth() + 1}`;
+      const showVal = (i === sel || i === best) && w.total;
+      return `<g class="wb ${i === sel ? "sel" : ""} ${i === 7 ? "now" : ""}" data-wk="${i}" role="button" tabindex="0" aria-label="Semana del ${shortDate(w.s)}: ${w.total} minutos">
+        <rect class="hit" x="${x - gap / 2}" y="0" width="${bw + gap}" height="${H}"/>
+        ${h ? `<path class="bar" d="${roundTop(x, y, bw, h, 6)}"/>` : `<rect class="zero" x="${x}" y="${T + ph - 3}" width="${bw}" height="3" rx="1.5"/>`}
+        ${showVal ? `<text class="val" x="${x + bw / 2}" y="${y - 6}" text-anchor="middle">${w.total}</text>` : ""}
+        <text class="xl" x="${x + bw / 2}" y="${H - 6}" text-anchor="middle">${lab}</text></g>`;
     }).join("");
-    const used = ACT_TYPES.filter((t) => weeks.some((w) => w.by[t.id]));
-    return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Minutos de actividad por semana">${grid}${cols}</svg>
-      <div class="legend">${used.map((t) => `<span><i style="background:${t.color}"></i>${t.emoji} ${t.name}</span>`).join("")}</div>
-      <div class="chart-tip" id="wkTip">${weekTip(weeks[sel])}</div>`;
+    const w = weeks[sel];
+    return `<svg class="chart wbars" viewBox="0 0 ${W} ${H}" role="img" aria-label="Minutos de actividad por semana">${bars}</svg>
+      <p class="wk-cap">${w.total ? `Semana del ${shortDate(w.s)}: <b>${fmtMin(w.total)}</b> en ${w.n} ${w.n === 1 ? "actividad" : "actividades"}` : `Semana del ${shortDate(w.s)}: sin actividad`}</p>`;
   }
-  function weekTip(w) {
-    if (!w.total) return `Semana del ${shortDate(w.s)}: sin actividad`;
-    const parts = ACT_TYPES.filter((t) => w.by[t.id]).map((t) => `${t.emoji} ${t.name} <b>${fmtMin(w.by[t.id])}</b>`).join(" · ");
-    return `<strong>Semana del ${shortDate(w.s)}</strong> · ${fmtMin(w.total)} en ${w.n} ${w.n === 1 ? "sesión" : "sesiones"}<br>${parts}`;
-  }
-
-  /* Barra segmentada: reparto de minutos por actividad en el mes */
-  function mixBar(list) {
-    const by = {}; let total = 0, n = {};
-    list.forEach((s) => { const t = typeOf(s); by[t] = (by[t] || 0) + (s.minutes || 0); n[t] = (n[t] || 0) + 1; total += s.minutes || 0; });
-    if (!total) return `<div class="empty small-empty">Sin actividades este mes.</div>`;
-    const parts = ACT_TYPES.filter((t) => by[t.id]);
-    return `<div class="segbar" role="img" aria-label="${parts.map((t) => `${t.name} ${Math.round((by[t.id] / total) * 100)}%`).join(", ")}">
-      ${parts.map((t) => { const p = (by[t.id] / total) * 100; return `<span style="flex:${by[t.id]};background:${t.color};color:${t.ink}" title="${t.name}: ${fmtMin(by[t.id])}">${p >= 14 ? Math.round(p) + "%" : ""}</span>`; }).join("")}
-    </div>
-    <div class="legend legend-col">${parts.map((t) => `<span><i style="background:${t.color}"></i>${t.emoji} ${t.name}<em>${fmtMin(by[t.id])} · ${n[t.id]} ${n[t.id] === 1 ? "vez" : "veces"}${by[t.id] / total * 100 < 14 ? ` · ${Math.round((by[t.id] / total) * 100)}%` : ""}</em></span>`).join("")}</div>`;
-  }
-
-  /* Barras horizontales: zonas trabajadas en el gimnasio */
-  function zonesChart(list) {
-    const cnt = {};
-    list.filter((s) => typeOf(s) === "gym").forEach((s) => areasOf(s).forEach((a) => (cnt[a] = (cnt[a] || 0) + 1)));
-    const rows = CATEGORIES.filter((c) => cnt[c.id]).sort((a, b) => cnt[b.id] - cnt[a.id]);
-    if (!rows.length) return `<div class="empty small-empty">Cuando entrenes o apuntes una sesión de gimnasio, aquí verás qué partes del cuerpo has trabajado.</div>`;
-    const max = Math.max(...rows.map((c) => cnt[c.id]));
-    const missing = CATEGORIES.filter((c) => !cnt[c.id] && c.id !== "full");
-    return `<div class="hbars">${rows.map((c) => `<div class="hbar"><span class="hl">${c.emoji} ${esc(c.name)}</span>
-        <span class="track"><span class="fill" style="width:${(cnt[c.id] / max) * 100}%"></span></span><b>${cnt[c.id]}</b></div>`).join("")}</div>
-      ${missing.length && missing.length < 8 ? `<p class="small muted" style="margin:12px 0 0">💡 Este mes aún no has trabajado: ${missing.map((c) => esc(c.name.toLowerCase())).join(", ")}.</p>` : ""}`;
-  }
-
-  /* Ánimo: cuántas veces cada carita */
-  function feelChart(list) {
-    if (!list.length) return `<div class="empty small-empty">Sin datos este mes.</div>`;
-    const cnt = [0, 0, 0, 0, 0]; list.forEach((s) => cnt[(s.feeling || 3) - 1]++);
-    const max = Math.max(...cnt), avg = list.reduce((a, s) => a + (s.feeling || 3), 0) / list.length;
-    const fa = FEELINGS[Math.round(avg) - 1];
-    return `<div class="feelbars">${FEELINGS.map((f, i) => `<div class="fb" title="${f.t}: ${cnt[i]}">
-        <span class="fv">${cnt[i] || ""}</span><span class="col"><span style="height:${max ? (cnt[i] / max) * 100 : 0}%"></span></span>
-        <span class="fe">${f.e}</span><span class="ft">${f.t}</span></div>`).join("")}</div>
-      <p class="center" style="margin:10px 0 0">De media te has sentido: <strong>${fa.e} ${fa.t}</strong></p>`;
-  }
-
-  /* Logros */
-  function badges() {
-    const S = db.sessions, n = S.length, mins = S.reduce((a, s) => a + (s.minutes || 0), 0);
-    const streak = weekStreak(), bestStreak = bestWeekStreak();
-    const areas = new Set(S.filter((s) => typeOf(s) === "gym").flatMap(areasOf));
-    const km = S.filter((s) => typeOf(s) === "paseo").reduce((a, s) => a + (s.km || 0), 0);
-    const balance = S.filter((s) => areasOf(s).includes("equilibrio")).length;
-    const types = new Set(S.map(typeOf));
-    const list = [
-      ["🌱", "Primer paso", "Tu primera actividad", n, 1],
-      ["🎯", "Constante", "10 actividades", n, 10],
-      ["🏅", "Imparable", "25 actividades", n, 25],
-      ["🏆", "Campeona", "50 actividades", n, 50],
-      ["🔥", "En racha", "2 semanas seguidas", Math.max(streak, bestStreak), 2],
-      ["💪", "Hábito", "4 semanas seguidas", Math.max(streak, bestStreak), 4],
-      ["🌟", "Estrella", "8 semanas seguidas", Math.max(streak, bestStreak), 8],
-      ["⏱️", "10 horas", "600 minutos en total", mins, 600],
-      ["🧭", "Exploradora", "5 zonas del cuerpo distintas", areas.size, 5],
-      ["⚖️", "Equilibrista", "10 sesiones de equilibrio", balance, 10],
-      ["🚶‍♀️", "Caminante", "20 km de paseo", km, 20],
-      ["🎨", "Variada", "3 tipos de actividad", types.size, 3],
-    ];
-    const got = list.filter(([, , , v, goal]) => v >= goal).length;
-    return { got, total: list.length, html: `<div class="badges">${list.map(([e, t, d, v, goal]) => {
-      const ok = v >= goal, pct = Math.min(100, Math.round((v / goal) * 100));
-      return `<div class="badge ${ok ? "ok" : ""}" title="${esc(d)}"><span class="be">${e}</span><strong>${t}</strong><span class="bd">${d}</span>
-        ${ok ? `<span class="bdone">✓ Conseguido</span>` : `<span class="bprog"><span style="width:${pct}%"></span></span>`}</div>`;
-    }).join("")}</div>` };
-  }
-  function bestWeekStreak() {
-    const weeks = [...new Set(db.sessions.map((s) => dateKey(weekStart(new Date(s.date)))))].sort();
-    let best = 0, cur = 0, prev = null;
-    weeks.forEach((k) => {
-      const d = parseKey(k);
-      cur = prev && (d - prev) / 864e5 < 8 ? cur + 1 : 1;
-      best = Math.max(best, cur); prev = d;
-    });
-    return best;
-  }
+  const roundTop = (x, y, w, h, r) => {
+    r = Math.min(r, w / 2, h);
+    return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`;
+  };
 
   function viewHistory() {
     const y = histMonth.getFullYear(), m = histMonth.getMonth();
@@ -773,77 +693,247 @@
     const minutes = list.reduce((a, s) => a + (s.minutes || 0), 0);
     const days = new Set(list.map((s) => s.date.slice(0, 10))).size;
     const km = list.reduce((a, s) => a + (s.km || 0), 0);
+    const avgFeel = list.length ? FEELINGS[Math.round(list.reduce((a, s) => a + (s.feeling || 3), 0) / list.length) - 1] : null;
     const first = new Date(y, m, 1);
-    const offset = (first.getDay() + 6) % 7, daysIn = new Date(y, m + 1, 0).getDate();
-    const todayK = dateKey(new Date());
+    const monthName = first.toLocaleDateString("es-ES", { month: "long" }).replace(/^./, (c) => c.toUpperCase());
+    const isCurrent = y === new Date().getFullYear() && m === new Date().getMonth();
+    const streak = weekStreak();
+
+    // Calendario
+    const offset = (first.getDay() + 6) % 7, daysIn = new Date(y, m + 1, 0).getDate(), todayK = dateKey(new Date());
     let cells = DAYS_SHORT.map((d) => `<div class="wd">${d}</div>`).join("");
     for (let i = 0; i < offset; i++) cells += `<div class="cd out"></div>`;
     for (let d = 1; d <= daysIn; d++) {
       const k = dateKey(new Date(y, m, d));
       const ts = [...new Set(sessionsOn(k).map(typeOf))];
-      cells += `<div class="cd ${ts.length ? "has" : ""} ${k === todayK ? "today" : ""}">${d}
-        ${ts.length ? `<span class="dots">${ts.slice(0, 3).map((t) => `<i style="background:${ACT[t].color}"></i>`).join("")}</span>` : ""}</div>`;
+      cells += ts.length
+        ? `<div class="cd has ${k === todayK ? "today" : ""}" style="--c:${ACT[ts[0]].color}" title="${ts.map((t) => ACT[t].name).join(", ")}"><span class="ce">${ACT[ts[0]].emoji}</span>${ts.length > 1 ? `<span class="cplus">+${ts.length - 1}</span>` : ""}</div>`
+        : `<div class="cd ${k === todayK ? "today" : ""}">${d}</div>`;
     }
-    const monthName = first.toLocaleDateString("es-ES", { month: "long", year: "numeric" }).replace(/^./, (c) => c.toUpperCase()).replace(" de ", " ");
-    const isCurrent = y === new Date().getFullYear() && m === new Date().getMonth();
-    const streak = weekStreak();
-    const b = badges();
+
+    // Lo que has hecho
+    const by = {}; list.forEach((s) => { const t = typeOf(s); by[t] = by[t] || { m: 0, n: 0 }; by[t].m += s.minutes || 0; by[t].n++; });
+    const types = Object.keys(by).sort((a, b) => by[b].m - by[a].m);
+    const maxT = Math.max(1, ...types.map((t) => by[t].m));
+    const doneRows = types.map((t) => `<div class="done-row" style="--c:${ACT[t].color}">
+        <span class="log-ic">${ACT[t].emoji}</span>
+        <div class="grow"><div class="dr-top"><strong>${ACT[t].name}</strong><span>${fmtMin(by[t].m)}</span></div>
+          <div class="dr-bar"><span style="width:${(by[t].m / maxT) * 100}%"></span></div>
+          <div class="small muted">${by[t].n} ${by[t].n === 1 ? "vez" : "veces"}</div></div></div>`).join("");
+
+    // Partes del cuerpo
+    const cnt = {};
+    list.filter((s) => typeOf(s) === "gym").forEach((s) => areasOf(s).forEach((a) => (cnt[a] = (cnt[a] || 0) + 1)));
+    const anyArea = Object.keys(cnt).length > 0;
+    const body = CATEGORIES.map((c) => `<div class="bchip ${cnt[c.id] ? "on" : ""}" style="--c:${c.color}">
+        <span class="be">${c.emoji}</span><span class="bn">${esc(c.name)}</span>${cnt[c.id] ? `<b>${cnt[c.id]}</b>` : ""}</div>`).join("");
+
+    const shown = showAllLogs ? list : list.slice(0, 4);
+    const b = achievementsState();
+
+    const sentence = list.length
+      ? `${fmtMin(minutes)} de movimiento en ${days} ${days === 1 ? "día" : "días"}`
+      : isCurrent ? "Pulsa el botón ＋ para apuntar tu primera actividad del mes" : "Este mes no hubo actividad";
+
     return {
       title: "Mi diario",
       html: `
-        <div class="month-nav">
-          <button class="mini-btn" data-act="h-month" data-d="-1" aria-label="Mes anterior"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
-          <strong>${esc(monthName)}</strong>
-          <button class="mini-btn" data-act="h-month" data-d="1" aria-label="Mes siguiente" ${isCurrent ? "disabled style='opacity:.35'" : ""}><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
+        <div class="diary-hero">
+          <div class="dh-nav">
+            <button class="dh-arrow" data-act="h-month" data-d="-1" aria-label="Mes anterior"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+            <span>${esc(monthName)} ${y !== new Date().getFullYear() ? y : ""}</span>
+            <button class="dh-arrow" data-act="h-month" data-d="1" aria-label="Mes siguiente" ${isCurrent ? "disabled" : ""}><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
+          </div>
+          <div class="dh-big"><b>${list.length}</b><span>${list.length === 1 ? "actividad" : "actividades"}</span></div>
+          <p class="dh-sub">${sentence}</p>
+          ${list.length ? `<div class="dh-pills">
+            ${streak && isCurrent ? `<span>🔥 ${streak} ${streak === 1 ? "semana" : "semanas"} seguidas</span>` : ""}
+            ${avgFeel ? `<span>${avgFeel.e} ${avgFeel.t} de media</span>` : ""}
+            ${km ? `<span>👟 ${km.toLocaleString("es-ES", { maximumFractionDigits: 1 })} km</span>` : ""}
+          </div>` : ""}
         </div>
-        <div class="kpis">
-          <div class="kpi"><span>Actividades</span><b>${list.length}</b></div>
-          <div class="kpi"><span>Tiempo activa</span><b>${minutes >= 60 ? `${Math.floor(minutes / 60)}<small> h</small> ${minutes % 60}<small> min</small>` : `${minutes}<small> min</small>`}</b></div>
-          <div class="kpi"><span>Días activos</span><b>${days}<small> de ${isCurrent ? new Date().getDate() : daysIn}</small></b></div>
-          <div class="kpi"><span>${km ? "Kilómetros" : "Logros"}</span><b>${km ? km.toLocaleString("es-ES", { maximumFractionDigits: 1 }) : `${b.got}<small> de ${b.total}</small>`}</b></div>
-        </div>
-        ${streak ? `<div class="streak">🔥 <span><strong>${streak} ${streak === 1 ? "semana" : "semanas seguidas"}</strong> activa. ¡Sigue así!</span></div>` : ""}
+
         <div class="section card">
-          <h3 class="card-title">Minutos por semana</h3>
-          <p class="small muted card-sub">Últimas 8 semanas. Toca una columna para ver el detalle.</p>
-          <div id="wkChart">${weeklyChart()}</div>
-        </div>
-        <div class="section card">
-          <h3 class="card-title">Tus actividades del mes</h3>
-          ${mixBar(list)}
-        </div>
-        <div class="section card">
-          <h3 class="card-title">Partes del cuerpo trabajadas</h3>
-          <p class="small muted card-sub">Sesiones de gimnasio de este mes.</p>
-          ${zonesChart(list)}
-        </div>
-        <div class="section card">
-          <h3 class="card-title">¿Cómo te has sentido?</h3>
-          ${feelChart(list)}
-        </div>
-        <div class="section card">
-          <div class="cal-head"><h3 class="card-title" style="margin:0">Calendario</h3></div>
           <div class="cal">${cells}</div>
         </div>
+
+        ${list.length ? `
         <div class="section card">
-          <h3 class="card-title">Logros <span class="muted small">${b.got} de ${b.total}</span></h3>
-          ${b.html}
+          <h3 class="card-title">Lo que has hecho</h3>
+          <div class="stack">${doneRows}</div>
+        </div>` : ""}
+
+        <div class="section card">
+          <h3 class="card-title">Semana a semana</h3>
+          <p class="small muted card-sub">Minutos de actividad. Toca una barra para ver la semana.</p>
+          <div id="wkChart">${weeklyBars()}</div>
         </div>
-        <div class="section"><h3 class="section-title">Actividades de ${esc(first.toLocaleDateString("es-ES", { month: "long" }))}</h3>
-          <div class="stack">${list.length ? list.map((s) => logItem(s)).join("") : `<div class="empty"><div class="big">📅</div><p>No hay actividades este mes todavía.<br>Pulsa el botón <strong>＋</strong> de abajo para apuntar la primera.</p></div>`}</div>
-        </div>`,
+
+        ${list.length ? `
+        <div class="section card">
+          <h3 class="card-title">Partes del cuerpo</h3>
+          <p class="small muted card-sub">${anyArea ? "Lo que has trabajado en el gimnasio este mes." : "Cuando apuntes gimnasio, marca qué has trabajado y aparecerá aquí."}</p>
+          <div class="bchips">${body}</div>
+        </div>
+
+        <div class="section">
+          <h3 class="section-title">Tus actividades</h3>
+          <div class="stack">${shown.map((s) => logItem(s)).join("")}</div>
+          ${list.length > 4 ? `<button class="btn ghost block" style="margin-top:12px" data-act="toggle-logs">${showAllLogs ? "Ver menos" : `Ver las ${list.length}`}</button>` : ""}
+        </div>` : ""}
+
+        <a class="section ach-teaser" href="#/logros">
+          <span class="at-medals">${b.recent.map((x) => `<span>${x.e}</span>`).join("") || "<span>🏅</span>"}</span>
+          <span class="grow"><strong>Mis logros</strong><span class="small muted">${b.got} de ${b.total} conseguidos</span></span>${CHEV}
+        </a>`,
       after() {
         const box = $("#wkChart");
-        box?.addEventListener("click", (e) => {
-          const g = e.target.closest("[data-wk]"); if (!g) return;
-          box.innerHTML = weeklyChart(+g.dataset.wk);
-        });
-        box?.addEventListener("keydown", (e) => {
-          const g = e.target.closest("[data-wk]");
-          if (g && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); box.innerHTML = weeklyChart(+g.dataset.wk); }
-        });
+        const pick = (g) => g && (box.innerHTML = weeklyBars(+g.dataset.wk));
+        box?.addEventListener("click", (e) => pick(e.target.closest("[data-wk]")));
+        box?.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(e.target.closest("[data-wk]")); } });
       },
     };
+  }
+
+  /* ---------- LOGROS ---------- */
+  const BADGE_GROUPS = [
+    { id: "const", name: "Constancia", c1: "#F7D774", c2: "#E3A21A" },
+    { id: "racha", name: "Rachas", c1: "#FFB38A", c2: "#E8613C" },
+    { id: "tiempo", name: "Tiempo", c1: "#9CC8F5", c2: "#2F7AD0" },
+    { id: "var", name: "Variedad", c1: "#A8E0B0", c2: "#3E9B57" },
+  ];
+  const BADGES = [
+    { g: "const", id: "n1", e: "🌱", name: "Primer paso", desc: "Apunta tu primera actividad", v: (m) => m.n, goal: 1, u: ["actividad", "actividades"] },
+    { g: "const", id: "n10", e: "🎯", name: "Constante", desc: "10 actividades", v: (m) => m.n, goal: 10, u: ["actividad", "actividades"] },
+    { g: "const", id: "n25", e: "🏅", name: "Imparable", desc: "25 actividades", v: (m) => m.n, goal: 25, u: ["actividad", "actividades"] },
+    { g: "const", id: "n50", e: "🏆", name: "Campeona", desc: "50 actividades", v: (m) => m.n, goal: 50, u: ["actividad", "actividades"] },
+    { g: "const", id: "n100", e: "👑", name: "Leyenda", desc: "100 actividades", v: (m) => m.n, goal: 100, u: ["actividad", "actividades"] },
+    { g: "racha", id: "s2", e: "🔥", name: "En racha", desc: "Activa 2 semanas seguidas", v: (m) => m.streak, goal: 2, u: ["semana", "semanas"] },
+    { g: "racha", id: "s4", e: "💪", name: "Hábito", desc: "Activa 4 semanas seguidas", v: (m) => m.streak, goal: 4, u: ["semana", "semanas"] },
+    { g: "racha", id: "s8", e: "🌟", name: "Estrella", desc: "Activa 8 semanas seguidas", v: (m) => m.streak, goal: 8, u: ["semana", "semanas"] },
+    { g: "racha", id: "s12", e: "💎", name: "Diamante", desc: "Activa 12 semanas seguidas", v: (m) => m.streak, goal: 12, u: ["semana", "semanas"] },
+    { g: "tiempo", id: "t60", e: "⏰", name: "Primera hora", desc: "60 minutos en total", v: (m) => m.mins, goal: 60, u: ["minuto", "minutos"] },
+    { g: "tiempo", id: "long", e: "🏔️", name: "Gran sesión", desc: "Una actividad de 1 hora o más", v: (m) => m.long, goal: 60, u: ["minuto", "minutos"] },
+    { g: "tiempo", id: "t600", e: "⏱️", name: "10 horas", desc: "10 horas en total", v: (m) => m.mins, goal: 600, u: ["minuto", "minutos"] },
+    { g: "tiempo", id: "t1500", e: "🚀", name: "25 horas", desc: "25 horas en total", v: (m) => m.mins, goal: 1500, u: ["minuto", "minutos"] },
+    { g: "var", id: "types3", e: "🎨", name: "Variada", desc: "3 tipos de actividad distintos", v: (m) => m.types, goal: 3, u: ["tipo", "tipos"] },
+    { g: "var", id: "areas5", e: "🧭", name: "Exploradora", desc: "Trabaja 5 partes del cuerpo distintas", v: (m) => m.areas, goal: 5, u: ["parte", "partes"] },
+    { g: "var", id: "areas8", e: "🌈", name: "Cuerpo entero", desc: "Trabaja todas las partes del cuerpo", v: (m) => m.areas, goal: 8, u: ["parte", "partes"] },
+    { g: "var", id: "gym20", e: "🏋️‍♀️", name: "Fuerte", desc: "20 sesiones de gimnasio", v: (m) => m.gym, goal: 20, u: ["sesión", "sesiones"] },
+    { g: "var", id: "bal10", e: "⚖️", name: "Equilibrista", desc: "10 sesiones de equilibrio", v: (m) => m.balance, goal: 10, u: ["sesión", "sesiones"] },
+    { g: "var", id: "km20", e: "🚶‍♀️", name: "Caminante", desc: "20 km de paseo", v: (m) => m.km, goal: 20, u: ["km", "km"] },
+  ];
+  function bestWeekStreak(S = db.sessions) {
+    const weeks = [...new Set(S.map((s) => dateKey(weekStart(new Date(s.date)))))].sort();
+    let best = 0, cur = 0, prev = null;
+    weeks.forEach((k) => { const d = parseKey(k); cur = prev && (d - prev) / 864e5 < 8 ? cur + 1 : 1; best = Math.max(best, cur); prev = d; });
+    return best;
+  }
+  function metrics(S) {
+    const m = { n: S.length, mins: 0, long: 0, km: 0, gym: 0, balance: 0, types: 0, areas: 0 };
+    const types = new Set(), areas = new Set();
+    S.forEach((s) => {
+      const t = typeOf(s), ar = areasOf(s);
+      m.mins += s.minutes || 0; m.long = Math.max(m.long, s.minutes || 0); types.add(t);
+      if (t === "paseo") m.km += s.km || 0;
+      if (t === "gym") { m.gym++; ar.forEach((a) => a !== "full" && areas.add(a)); if (ar.includes("full")) ["piernas", "espalda", "pecho", "hombros", "brazos", "core"].forEach((a) => areas.add(a)); }
+      if (ar.includes("equilibrio")) m.balance++;
+    });
+    m.types = types.size; m.areas = areas.size; m.streak = bestWeekStreak(S);
+    return m;
+  }
+  /* Estado de todos los logros, con la fecha en que se consiguió cada uno */
+  function achievementsState() {
+    const S = [...db.sessions].sort((a, b) => a.date.localeCompare(b.date));
+    const m = metrics(S);
+    const when = {};
+    let pending = BADGES.filter((b) => b.v(m) >= b.goal);
+    for (let i = 0; i < S.length && pending.length; i++) {
+      const mi = metrics(S.slice(0, i + 1));
+      pending = pending.filter((b) => { if (b.v(mi) >= b.goal) { when[b.id] = S[i].date; return false; } return true; });
+    }
+    const list = BADGES.map((b) => ({ ...b, val: b.v(m), ok: b.v(m) >= b.goal, when: when[b.id] }));
+    const got = list.filter((b) => b.ok);
+    const recent = [...got].sort((a, b) => (b.when || "").localeCompare(a.when || "")).slice(0, 3);
+    const next = list.filter((b) => !b.ok).sort((a, b) => b.val / b.goal - a.val / a.goal)[0];
+    return { list, got: got.length, total: list.length, recent, next };
+  }
+  const earnedIds = () => achievementsState().list.filter((b) => b.ok).map((b) => b.id);
+  function leftText(b) {
+    const r = Math.max(0, b.goal - b.val);
+    const v = b.u[0] === "km" ? r.toLocaleString("es-ES", { maximumFractionDigits: 1 }) : Math.ceil(r);
+    return `Te ${r === 1 ? "falta" : "faltan"} ${v} ${r === 1 ? b.u[0] : b.u[1]}`;
+  }
+  function medal(b, size = "") {
+    const g = BADGE_GROUPS.find((x) => x.id === b.g);
+    const pct = Math.min(100, Math.round((b.val / b.goal) * 100));
+    return `<span class="medal-ring ${size} ${b.ok ? "ok" : ""}" style="--m1:${g.c1};--m2:${g.c2};--p:${b.ok ? 100 : pct}%">
+      <span class="medal">${b.e}</span>${b.ok ? "" : `<span class="lock">🔒</span>`}</span>`;
+  }
+  function viewAchievements() {
+    const st = achievementsState();
+    const pct = st.got / st.total;
+    const R = 46, C = 2 * Math.PI * R;
+    const msg = st.got === 0 ? "Tu colección de medallas te espera. ¡Apunta tu primera actividad!"
+      : st.got === st.total ? "¡Los tienes todos! Eres increíble 👑"
+      : st.got >= st.total / 2 ? "¡Vas genial! Ya tienes más de la mitad." : "¡Buen comienzo! Cada actividad suma.";
+    const groups = BADGE_GROUPS.map((g) => {
+      const items = st.list.filter((b) => b.g === g.id);
+      return `<div class="section">
+        <h3 class="section-title">${g.name} <span class="muted small">${items.filter((b) => b.ok).length} de ${items.length}</span></h3>
+        <div class="medals">${items.map((b) => `<button class="medal-card ${b.ok ? "ok" : ""}" data-act="badge" data-id="${b.id}">
+          ${medal(b)}<strong>${esc(b.name)}</strong>
+          <span class="mc-sub">${b.ok ? (b.when ? `✓ ${shortDate(new Date(b.when))}` : "✓ Conseguido") : `${b.u[0] === "km" ? b.val.toLocaleString("es-ES", { maximumFractionDigits: 1 }) : Math.floor(b.val)} / ${b.goal}`}</span>
+        </button>`).join("")}</div></div>`;
+    }).join("");
+    return {
+      title: "Mis logros",
+      html: `
+        <div class="ach-hero">
+          <svg class="ach-ring" viewBox="0 0 110 110" aria-hidden="true">
+            <circle cx="55" cy="55" r="${R}" class="bg"/>
+            <circle cx="55" cy="55" r="${R}" class="fg" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - pct)}"/>
+          </svg>
+          <div class="ach-count"><b>${st.got}</b><span>de ${st.total}</span></div>
+          <p>${msg}</p>
+        </div>
+        ${st.next ? `<button class="next-badge section" data-act="badge" data-id="${st.next.id}">
+          ${medal(st.next, "sm")}
+          <span class="grow"><span class="eyebrow-s">Tu próximo logro</span><strong>${esc(st.next.name)}</strong>
+            <span class="nb-bar"><span style="width:${Math.min(100, (st.next.val / st.next.goal) * 100)}%"></span></span>
+            <span class="small muted">${leftText(st.next)}</span></span></button>` : ""}
+        ${groups}`,
+    };
+  }
+  function openBadgeSheet(id) {
+    const b = achievementsState().list.find((x) => x.id === id); if (!b) return;
+    openSheet(`<div class="badge-sheet">
+        ${medal(b, "xl")}
+        <h2>${esc(b.name)}</h2>
+        <p class="muted">${esc(b.desc)}</p>
+        ${b.ok
+          ? `<p class="bs-ok">✓ Conseguido${b.when ? ` el ${new Date(b.when).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}` : ""}</p>`
+          : `<div class="nb-bar big"><span style="width:${Math.min(100, (b.val / b.goal) * 100)}%"></span></div><p><strong>${leftText(b)}</strong></p>`}
+        <button class="btn block" data-act="close-sheet">${b.ok ? "¡Genial!" : "¡A por ello!"}</button></div>`);
+  }
+  /* Si al guardar se consigue un logro nuevo, lo celebramos */
+  function celebrateNew(before) {
+    const after = achievementsState();
+    const fresh = after.list.filter((b) => b.ok && !before.includes(b.id));
+    if (!fresh.length) return;
+    const b = fresh[fresh.length - 1];
+    setTimeout(() => {
+      beep(true);
+      openSheet(`<div class="badge-sheet celebrate">
+        <div class="confetti-row">🎉 ✨ 🎊</div>
+        <div class="eyebrow-s">¡Nuevo logro!</div>
+        ${medal(b, "xl")}
+        <h2>${esc(b.name)}</h2>
+        <p class="muted">${esc(b.desc)}</p>
+        ${fresh.length > 1 ? `<p class="small">Y ${fresh.length - 1} ${fresh.length === 2 ? "logro más" : "logros más"} 🏅</p>` : ""}
+        <div class="stack"><a class="btn block" href="#/logros">Ver mis logros</a>
+        <button class="btn ghost block" data-act="close-sheet">¡Genial!</button></div></div>`);
+    }, 450);
   }
 
   /* ---------- Ajustes ---------- */
@@ -923,13 +1013,14 @@
      ========================================================= */
   const ROUTES = [
     [/^\/?$/, viewHome, "home"],
-    [/^\/rutinas$/, viewRoutines, "rutinas"],
-    [/^\/categoria\/([^/]+)$/, viewCategory, "rutinas", "#/rutinas"],
-    [/^\/rutina\/([^/]+)$/, viewRoutineDetail, "rutinas", "#/rutinas"],
-    [/^\/crear(?:\/([^/]+))?$/, viewBuilder, "rutinas", "#/rutinas"],
-    [/^\/ejercicios$/, viewExercises, "ejercicios"],
-    [/^\/ejercicio\/([^/]+)$/, viewExerciseDetail, "ejercicios", "#/ejercicios"],
+    [/^\/rutinas$/, viewRoutines, "entrenar"],
+    [/^\/categoria\/([^/]+)$/, viewCategory, "entrenar", "#/rutinas"],
+    [/^\/rutina\/([^/]+)$/, viewRoutineDetail, "entrenar", "#/rutinas"],
+    [/^\/crear(?:\/([^/]+))?$/, viewBuilder, "entrenar", "#/rutinas"],
+    [/^\/ejercicios$/, viewExercises, "entrenar"],
+    [/^\/ejercicio\/([^/]+)$/, viewExerciseDetail, "entrenar", "#/ejercicios"],
     [/^\/historial$/, viewHistory, "historial"],
+    [/^\/logros$/, viewAchievements, "logros"],
     [/^\/ajustes$/, viewSettings, "", "#/"],
   ];
   let navCount = 0, parentHash = "#/";
@@ -1311,6 +1402,7 @@
     P.finished = true;
   }
   function saveSession() {
+    const before = earnedIds();
     db.sessions.push({
       id: uid(), date: localStamp(),
       type: "gym", routineId: P.r.id, name: P.r.name, emoji: P.r.emoji || "🏋️‍♀️",
@@ -1322,6 +1414,7 @@
     stopWorkout();
     toast("✅ ¡Guardado en tu diario!");
     if (location.hash === "#/" || location.hash === "") router(); else location.hash = "#/";
+    celebrateNew(before);
   }
   function closePlayerAsk() {
     if (P.finished) { stopWorkout(); return; }
@@ -1399,9 +1492,11 @@
       location.hash = "#/rutina/" + id;
     },
     // historial
-    "h-month": (el) => { histMonth.setMonth(histMonth.getMonth() + +el.dataset.d); router(); },
+    "h-month": (el) => { histMonth.setMonth(histMonth.getMonth() + +el.dataset.d); showAllLogs = false; router(); },
     "add-manual": () => openActivitySheet(),
-    "add-activity": () => { if (!P) openActivitySheet(); },
+    "add-activity": (el) => { if (!P) openActivitySheet(null, el.dataset.type); },
+    "toggle-logs": () => { showAllLogs = !showAllLogs; router(); },
+    "badge": (el) => openBadgeSheet(el.dataset.id),
     "edit-session": (el) => { const s = db.sessions.find((x) => x.id === el.dataset.id); if (s) openActivitySheet(s); },
     "del-session": (el) => confirmSheet("¿Borrar esta sesión?", "Se quitará de tu diario.", "Sí, borrar", () => {
       db.sessions = db.sessions.filter((s) => s.id !== el.dataset.id); save(); router();
