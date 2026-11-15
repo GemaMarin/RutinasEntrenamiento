@@ -334,32 +334,35 @@
     const today = dateKey(now), todays = sessionsOn(today);
     const planCat = WEEK_PLAN[now.getDay()], planned = planCat ? suggestedRoutine(planCat, now) : null;
 
-    let card;
-    if (todays.length) {
-      card = `<div class="tcard tcard-done">
-        <div class="today-art"><span class="today-icon">${ICON.check}</span>
-          <div><h3>¡Bien hecho${name ? `, ${esc(name)}` : ""}!</h3><p>Hoy ya te has movido.</p></div></div>
-        <div class="today-body">
-          <div class="today-done-list">${todays.map((s) => `<span><i>${ACT[typeOf(s)].emoji}</i>${esc(s.name)}<em>${fmtMin(s.minutes || 0)}</em></span>`).join("")}</div>
-          <div class="row"><button class="btn soft grow" data-act="add-activity">Apuntar otra</button>
-            <a class="btn ghost" href="#/categoria/movilidad">Estirar</a></div></div></div>`;
-    } else if (planned) {
-      const c = catOf(planned.cat);
-      const imgs = planned.items.slice(0, 3).map(([id]) => `<img src="${miniSrc(id)}" alt="">`).join("");
-      card = `<div class="tcard">
-        <div class="today-art" style="${catStyle(c)}"><span class="badge-day">${c.emoji} Hoy · ${esc(c.name)}</span>${imgs}</div>
-        <div class="today-body">
-          <h3>${esc(planned.name)}</h3>
-          <p>${planned.items.length} ejercicios · unos ${estimate(withWarmup(planned))} minutos · ${LEVELS[routineLevel(planned)].toLowerCase()}</p>
-          <div class="row"><button class="btn grow" data-act="start" data-id="${planned.id}">${ICON.play} Empezar</button>
-            <a class="btn ghost" href="#/rutina/${planned.id}">Ver</a></div></div></div>`;
-    } else {
-      card = `<div class="tcard tcard-rest">
-        <div class="today-art"><span class="today-icon">🚶‍♀️</span>
-          <div><h3>Día de descanso</h3><p>Un paseo o unos estiramientos suaves te sentarán genial.</p></div></div>
-        <div class="today-body"><div class="row"><button class="btn grow" data-act="add-activity" data-type="paseo">Apuntar paseo</button>
-          <a class="btn ghost" href="#/categoria/movilidad">Estirar</a></div></div></div>`;
-    }
+    // 1) Registrar actividad (lo primero)
+    const PLUS = `<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>`;
+    const doneMins = todays.reduce((acc, x) => acc + (x.minutes || 0), 0);
+    const doneLine = todays.length
+      ? `<div class="done-strip"><span class="ds-ic">${ICON.check}</span><span>Hoy ya has hecho <b>${todays.map((x) => esc(x.name)).join(", ")}</b> · ${fmtMin(doneMins)}</span></div>` : "";
+    const logCard = `<div class="log-card">
+      <div class="lc-head">
+        <div><h3>Registrar actividad</h3><p>¿Qué has hecho hoy? Toca y apúntalo.</p></div>
+        <button class="lc-plus" data-act="add-activity" aria-label="Registrar nueva actividad">${PLUS}</button>
+      </div>
+      <div class="lc-grid">${ACT_TYPES.map((t) => `<button class="lc-type" data-act="add-activity" data-type="${t.id}" style="--c:${t.color}">
+        <span class="em">${t.emoji}</span>${t.name}</button>`).join("")}</div>
+      ${doneLine}
+    </div>`;
+
+    // 2) Entrenar con la app
+    const sugg = planned || suggestedRoutine("movilidad", now);
+    const sc = catOf(sugg.cat);
+    const imgs = sugg.items.slice(0, 3).map(([id]) => `<img src="${miniSrc(id)}" alt="">`).join("");
+    const trainCard = `<div class="tcard train-card">
+      <div class="today-art" style="${catStyle(sc)}"><span class="badge-day">${planned ? "✨ Tu rutina de hoy" : "🌿 Hoy, algo suave"}</span>${imgs}</div>
+      <div class="today-body">
+        <span class="eyebrow-s">${sc.emoji} ${esc(sc.name)} · ${routineMins(sugg)} min · ${sugg.items.length} ejercicios</span>
+        <h3>${esc(sugg.name)}</h3>
+        <div class="row"><button class="btn grow" data-act="start" data-id="${sugg.id}">${ICON.play} Empezar</button>
+          <a class="btn ghost" href="#/rutina/${sugg.id}">Ver</a></div>
+      </div></div>`;
+    const card = `${logCard}
+      <div class="section"><h3 class="section-title">Entrenar con la app <a href="#/rutinas">Todas las rutinas</a></h3>${trainCard}</div>`;
 
     const ws = weekStart();
     const week = DAYS_SHORT.map((d, i) => {
