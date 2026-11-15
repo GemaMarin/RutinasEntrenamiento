@@ -473,84 +473,377 @@
     });
   }
 
-  /* ---------- Historial ---------- */
-  let histMonth = new Date(); histMonth.setDate(1);
-  function logItem(s, canDelete = true) {
-    const d = new Date(s.date);
-    const f = FEELINGS[(s.feeling || 3) - 1];
-    return `<div class="log-item">
-      <span class="e">${esc(s.emoji || "🏋️‍♀️")}</span>
-      <div class="grow"><h4>${esc(s.name)}</h4>
-        <div class="sub">${d.toLocaleDateString("es-ES", { weekday: "short", day: "numeric", month: "short" })} · ${s.minutes} min${s.total ? ` · ${s.exercises}/${s.total} ejercicios` : ""}</div>
-        ${s.note ? `<div class="note">“${esc(s.note)}”</div>` : ""}</div>
-      <span class="e" title="${f.t}">${f.e}</span>
-      ${canDelete ? `<button class="mini-btn" data-act="del-session" data-id="${s.id}" aria-label="Borrar sesión"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button>` : ""}
-    </div>`;
+  /* ---------- Actividades y diario ---------- */
+  // Colores validados para daltonismo (orden fijo; el color sigue a la actividad, nunca al ranking)
+  const ACT_TYPES = [
+    { id: "gym", name: "Gimnasio", emoji: "🏋️‍♀️", color: "#2a78d6", ink: "#fff" },
+    { id: "paseo", name: "Paseo", emoji: "🚶‍♀️", color: "#eb6834", ink: "#fff", km: true },
+    { id: "natacion", name: "Natación", emoji: "🏊‍♀️", color: "#1baf7a", ink: "#14161f" },
+    { id: "bici", name: "Bici", emoji: "🚴‍♀️", color: "#eda100", ink: "#14161f", km: true },
+    { id: "yoga", name: "Yoga", emoji: "🧘‍♀️", color: "#e87ba4", ink: "#14161f" },
+    { id: "otra", name: "Otra", emoji: "✨", color: "#008300", ink: "#fff" },
+  ];
+  const ACT = Object.fromEntries(ACT_TYPES.map((t) => [t.id, t]));
+  const INTENSITY = [["🙂", "Suave"], ["😅", "Moderado"], ["🔥", "Intenso"]];
+  const fmtMin = (m) => (m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ""}` : `${m} min`);
+  const shortDate = (d) => d.toLocaleDateString("es-ES", { day: "numeric", month: "short" }).replace(".", "");
+
+  function typeOf(s) {
+    if (s.type && ACT[s.type]) return s.type;
+    if (s.routineId) return "gym";
+    const n = norm(s.name || "");
+    if (n.includes("paseo") || n.includes("camin")) return "paseo";
+    if (n.includes("yoga") || n.includes("pilates")) return "yoga";
+    if (n.includes("nata")) return "natacion";
+    if (n.includes("bici")) return "bici";
+    if (n.includes("gimnas")) return "gym";
+    return "otra";
   }
+  /* Zonas trabajadas: usan los mismos ids que las categorías (full, piernas, espalda…) */
+  function areasOfRoutine(r) {
+    if (!r) return [];
+    if (r.cat) return [r.cat];
+    const items = r.items.slice(r.warm || 0);
+    return [...new Set(items.map(([e]) => EX[e]?.zone).filter(Boolean))];
+  }
+  function areasOf(s) {
+    if (Array.isArray(s.areas)) return s.areas;
+    if (!s.routineId) return [];
+    if (s.routineId.startsWith("ex-")) { const ex = EX[s.routineId.slice(3)]; return ex ? [ex.zone] : []; }
+    return areasOfRoutine(getRoutine(s.routineId));
+  }
+
+  /* ----- Formulario para apuntar / editar una actividad ----- */
+  function openActivitySheet(s0 = null) {
+    const isWorkout = !!s0?.routineId;
+    const st = {
+      type: s0 ? typeOf(s0) : "gym",
+      minutes: s0?.minutes || 30, feeling: s0?.feeling || 3, intensity: s0?.intensity || 2,
+      areas: new Set(s0 ? areasOf(s0) : []), km: s0?.km || 0,
+    };
+    const today = dateKey(new Date()), yest = dateKey(new Date(Date.now() - 864e5));
+    const d0 = s0 ? s0.date.slice(0, 10) : today;
+    openSheet(`<h2>${s0 ? "Editar actividad" : "¿Qué has hecho hoy?"}</h2>
+      <div class="stack">
+        <div class="act-grid">${ACT_TYPES.map((t) => `<button class="act-type ${t.id === st.type ? "on" : ""}" data-at="${t.id}" style="--c:${t.color}" ${isWorkout && t.id !== "gym" ? "disabled" : ""}>
+          <span class="em">${t.emoji}</span>${t.name}</button>`).join("")}</div>
+        ${isWorkout ? `<p class="small muted" style="margin:0">Rutina: <strong>${esc(s0.name)}</strong></p>` : ""}
+        <label class="field" id="aOther"><span>¿Qué actividad?</span><input class="input" id="aName" maxlength="30" placeholder="Ej.: Baile, Pilates, Tenis…" value="${esc(s0 && typeOf(s0) === "otra" ? s0.name : "")}"></label>
+        <div id="aAreas"><strong>¿Qué has trabajado?</strong> <span class="small muted">(puedes elegir varias)</span>
+          <div class="chips wrap" style="margin-top:8px">${CATEGORIES.map((c) => `<button class="chip ${st.areas.has(c.id) ? "on" : ""}" data-aa="${c.id}">${c.emoji} ${esc(c.name)}</button>`).join("")}</div></div>
+        <div class="card dur">
+          <strong>¿Cuánto tiempo?</strong>
+          <div class="dur-row"><button class="round" data-am="-5" aria-label="Menos">−</button><output id="aMin">${st.minutes}</output><span class="unit">min</span><button class="round" data-am="5" aria-label="Más">+</button></div>
+          <div class="chips wrap center-chips">${[15, 30, 45, 60, 90].map((m) => `<button class="chip ${m === st.minutes ? "on" : ""}" data-aq="${m}">${m < 60 ? m + " min" : fmtMin(m)}</button>`).join("")}</div>
+        </div>
+        <div class="switch-row card" id="aKm"><div><strong>Distancia</strong><div class="small muted">Opcional</div></div>
+          <span class="stepper"><button data-ak="-0.5" aria-label="Menos">−</button><output id="aKmV">${st.km} km</output><button data-ak="0.5" aria-label="Más">+</button></span></div>
+        <div><strong>Esfuerzo</strong>
+          <div class="seg seg-icons" style="margin-top:8px">${INTENSITY.map(([e, t], i) => `<button data-ai="${i + 1}" class="${i + 1 === st.intensity ? "on" : ""}"><span class="se">${e}</span>${t}</button>`).join("")}</div></div>
+        <div><strong>¿Cómo te has sentido?</strong>
+          <div class="feel" style="margin-top:8px">${FEELINGS.map((f, i) => `<button data-mf="${i + 1}" class="${i + 1 === st.feeling ? "on" : ""}"><span class="e">${f.e}</span>${f.t}</button>`).join("")}</div></div>
+        <div><strong>¿Cuándo?</strong>
+          <div class="row" style="margin-top:8px;flex-wrap:wrap">
+            <button class="chip ${d0 === today ? "on" : ""}" data-ad="${today}">Hoy</button>
+            <button class="chip ${d0 === yest ? "on" : ""}" data-ad="${yest}">Ayer</button>
+            <input class="input grow" type="date" id="aDate" value="${d0}" max="${today}" style="min-width:150px">
+          </div></div>
+        <label class="field"><span>Comentario <span class="small muted">(opcional)</span></span>
+          <textarea class="input" id="aNote" maxlength="200" placeholder="Ej.: Paseo por el parque con Carmen">${esc(s0?.note || "")}</textarea></label>
+        <button class="btn block huge green" id="aSave">${s0 ? "💾 Guardar cambios" : "✅ Guardar en mi diario"}</button>
+        ${s0 ? `<button class="btn danger block" id="aDel">🗑 Borrar esta actividad</button>` : ""}
+      </div>`, (sh) => {
+      const sync = () => {
+        const t = ACT[st.type];
+        $("#aOther", sh).hidden = st.type !== "otra";
+        $("#aAreas", sh).hidden = st.type !== "gym";
+        $("#aKm", sh).hidden = !t.km;
+        $("#aMin", sh).textContent = st.minutes;
+        $("#aKmV", sh).textContent = `${st.km.toLocaleString("es-ES")} km`;
+        $$("[data-aq]", sh).forEach((b) => b.classList.toggle("on", +b.dataset.aq === st.minutes));
+      };
+      sync();
+      sh.addEventListener("click", (e) => {
+        const at = e.target.closest("[data-at]"), aa = e.target.closest("[data-aa]"), am = e.target.closest("[data-am]"),
+          aq = e.target.closest("[data-aq]"), ak = e.target.closest("[data-ak]"), ai = e.target.closest("[data-ai]"),
+          mf = e.target.closest("[data-mf]"), ad = e.target.closest("[data-ad]");
+        if (at && !at.disabled) { st.type = at.dataset.at; $$("[data-at]", sh).forEach((b) => b.classList.toggle("on", b === at)); }
+        if (aa) { const id = aa.dataset.aa; st.areas.has(id) ? st.areas.delete(id) : st.areas.add(id); aa.classList.toggle("on", st.areas.has(id)); }
+        if (am) st.minutes = Math.max(5, Math.min(600, st.minutes + +am.dataset.am));
+        if (aq) st.minutes = +aq.dataset.aq;
+        if (ak) st.km = Math.max(0, Math.min(200, Math.round((st.km + +ak.dataset.ak) * 10) / 10));
+        if (ai) { st.intensity = +ai.dataset.ai; $$("[data-ai]", sh).forEach((b) => b.classList.toggle("on", b === ai)); }
+        if (mf) { st.feeling = +mf.dataset.mf; $$("[data-mf]", sh).forEach((b) => b.classList.toggle("on", b === mf)); }
+        if (ad) { $("#aDate", sh).value = ad.dataset.ad; $$("[data-ad]", sh).forEach((b) => b.classList.toggle("on", b === ad)); }
+        if (at || am || aq || ak) sync();
+      });
+      $("#aDate", sh).addEventListener("change", (e) => $$("[data-ad]", sh).forEach((b) => b.classList.toggle("on", b.dataset.ad === e.target.value)));
+      $("#aSave", sh).addEventListener("click", () => {
+        const t = ACT[st.type];
+        const dk = $("#aDate", sh).value || today;
+        let date;
+        if (s0 && s0.date.slice(0, 10) === dk) date = s0.date;
+        else { const d = parseKey(dk), n = new Date(); d.setHours(n.getHours(), n.getMinutes(), n.getSeconds()); date = localStamp(d); }
+        const rec = {
+          ...(s0 || {}), id: s0?.id || uid(), date, type: st.type,
+          name: isWorkout ? s0.name : st.type === "otra" ? ($("#aName", sh).value.trim() || "Otra actividad") : t.name,
+          emoji: isWorkout ? s0.emoji : t.emoji,
+          minutes: st.minutes, feeling: st.feeling, intensity: st.intensity,
+          note: $("#aNote", sh).value.trim(),
+        };
+        if (t.km && st.km > 0) rec.km = st.km; else delete rec.km;
+        if (st.type === "gym") rec.areas = [...st.areas]; else delete rec.areas;
+        if (s0) db.sessions = db.sessions.map((x) => (x.id === s0.id ? rec : x));
+        else db.sessions.push(rec);
+        save(); closeSheet();
+        toast(s0 ? "💾 Cambios guardados" : `${t.emoji} ¡Apuntado en tu diario!`);
+        router();
+      });
+      $("#aDel", sh)?.addEventListener("click", () => confirmSheet("¿Borrar esta actividad?", "Se quitará de tu diario.", "Sí, borrar", () => {
+        db.sessions = db.sessions.filter((x) => x.id !== s0.id); save(); toast("Actividad borrada"); router();
+      }, true));
+    });
+  }
+
+  /* ----- Diario ----- */
+  let histMonth = new Date(); histMonth.setDate(1);
+  function logItem(s, canEdit = true) {
+    const t = ACT[typeOf(s)], d = new Date(s.date), f = FEELINGS[(s.feeling || 3) - 1];
+    const areas = typeOf(s) === "gym" ? areasOf(s).map((a) => catOf(a)).filter(Boolean) : [];
+    const extra = [fmtMin(s.minutes || 0), s.km ? `${s.km.toLocaleString("es-ES")} km` : "", s.intensity ? INTENSITY[s.intensity - 1][1] : ""].filter(Boolean).join(" · ");
+    const tag = canEdit ? "button" : "div";
+    return `<${tag} class="log-item" ${canEdit ? `data-act="edit-session" data-id="${esc(s.id)}" aria-label="Editar ${esc(s.name || t.name)}"` : ""} style="--c:${t.color}">
+      <span class="log-ic">${t.emoji}</span>
+      <div class="grow"><h4>${esc(s.name || t.name)}</h4>
+        <div class="sub">${esc(d.toLocaleDateString("es-ES", { weekday: "short", day: "numeric", month: "short" }))} · ${esc(extra)}</div>
+        ${areas.length ? `<div class="mini-tags">${areas.map((c) => `<span>${c.emoji} ${esc(c.name)}</span>`).join("")}</div>` : ""}
+        ${s.note ? `<div class="note">“${esc(s.note)}”</div>` : ""}</div>
+      <span class="e" title="${f.t}">${f.e}</span></${tag}>`;
+  }
+
+  /* Escala "bonita" para los ejes */
+  function niceMax(v) {
+    const steps = [15, 30, 60, 90, 120, 180, 240, 300, 600];
+    const step = steps.find((s) => v / s <= 4) || 600;
+    return { top: Math.max(step, Math.ceil(v / step) * step), step };
+  }
+  const roundTop = (x, y, w, h, r) => {
+    r = Math.min(r, w / 2, h);
+    return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`;
+  };
+
+  /* Columnas apiladas: minutos por semana (últimas 8) */
+  function weeklyData() {
+    const w0 = weekStart(), weeks = [];
+    for (let i = 7; i >= 0; i--) {
+      const s = new Date(w0); s.setDate(w0.getDate() - 7 * i);
+      const e = new Date(s); e.setDate(s.getDate() + 7);
+      weeks.push({ s, e, by: {}, total: 0, n: 0 });
+    }
+    db.sessions.forEach((x) => {
+      const d = new Date(x.date), w = weeks.find((w) => d >= w.s && d < w.e);
+      if (!w) return;
+      const t = typeOf(x);
+      w.by[t] = (w.by[t] || 0) + (x.minutes || 0); w.total += x.minutes || 0; w.n++;
+    });
+    return weeks;
+  }
+  function weeklyChart(sel = 7) {
+    const weeks = weeklyData();
+    if (!weeks.some((w) => w.total)) return `<div class="empty small-empty">Aún no hay actividad en las últimas semanas.</div>`;
+    const W = 340, H = 190, L = 34, R = 6, T = 18, Bm = 26;
+    const pw = W - L - R, ph = H - T - Bm, cw = pw / weeks.length, bw = Math.min(26, cw * 0.62);
+    const { top, step } = niceMax(Math.max(...weeks.map((w) => w.total)));
+    const y = (v) => T + ph - (v / top) * ph;
+    let grid = "";
+    for (let v = 0; v <= top; v += step) {
+      grid += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" class="${v ? "grid" : "base"}"/>
+        <text x="${L - 6}" y="${y(v) + 3.5}" class="tick" text-anchor="end">${v}</text>`;
+    }
+    const cols = weeks.map((w, i) => {
+      const x = L + i * cw + (cw - bw) / 2;
+      let acc = 0, segs = "", seps = "";
+      ACT_TYPES.forEach((t) => {
+        const v = w.by[t.id]; if (!v) return;
+        const y1 = y(acc + v), h = y(acc) - y1;
+        segs += `<rect x="${x}" y="${y1}" width="${bw}" height="${h}" fill="${t.color}"/>`;
+        if (acc > 0) seps += `<rect x="${x}" y="${y(acc) - 1}" width="${bw}" height="2" fill="#fff"/>`;
+        acc += v;
+      });
+      const hTot = y(0) - y(w.total);
+      const label = i === 7 ? "Esta" : `${w.s.getDate()}/${w.s.getMonth() + 1}`;
+      return `<g class="wk ${i === sel ? "sel" : ""}" data-wk="${i}" role="button" tabindex="0" aria-label="Semana del ${shortDate(w.s)}: ${w.total} minutos">
+        <rect class="hit" x="${L + i * cw}" y="${T}" width="${cw}" height="${ph + Bm}"/>
+        ${w.total ? `<clipPath id="wc${i}"><path d="${roundTop(x, y(w.total), bw, hTot, 4)}"/></clipPath><g clip-path="url(#wc${i})">${segs}${seps}</g>` : ""}
+        ${i === sel && w.total ? `<text class="cap" x="${x + bw / 2}" y="${y(w.total) - 5}" text-anchor="middle">${w.total}</text>` : ""}
+        <text class="xl ${i === 7 ? "now" : ""}" x="${x + bw / 2}" y="${H - 8}" text-anchor="middle">${label}</text></g>`;
+    }).join("");
+    const used = ACT_TYPES.filter((t) => weeks.some((w) => w.by[t.id]));
+    return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Minutos de actividad por semana">${grid}${cols}</svg>
+      <div class="legend">${used.map((t) => `<span><i style="background:${t.color}"></i>${t.emoji} ${t.name}</span>`).join("")}</div>
+      <div class="chart-tip" id="wkTip">${weekTip(weeks[sel])}</div>`;
+  }
+  function weekTip(w) {
+    if (!w.total) return `Semana del ${shortDate(w.s)}: sin actividad`;
+    const parts = ACT_TYPES.filter((t) => w.by[t.id]).map((t) => `${t.emoji} ${t.name} <b>${fmtMin(w.by[t.id])}</b>`).join(" · ");
+    return `<strong>Semana del ${shortDate(w.s)}</strong> · ${fmtMin(w.total)} en ${w.n} ${w.n === 1 ? "sesión" : "sesiones"}<br>${parts}`;
+  }
+
+  /* Barra segmentada: reparto de minutos por actividad en el mes */
+  function mixBar(list) {
+    const by = {}; let total = 0, n = {};
+    list.forEach((s) => { const t = typeOf(s); by[t] = (by[t] || 0) + (s.minutes || 0); n[t] = (n[t] || 0) + 1; total += s.minutes || 0; });
+    if (!total) return `<div class="empty small-empty">Sin actividades este mes.</div>`;
+    const parts = ACT_TYPES.filter((t) => by[t.id]);
+    return `<div class="segbar" role="img" aria-label="${parts.map((t) => `${t.name} ${Math.round((by[t.id] / total) * 100)}%`).join(", ")}">
+      ${parts.map((t) => { const p = (by[t.id] / total) * 100; return `<span style="flex:${by[t.id]};background:${t.color};color:${t.ink}" title="${t.name}: ${fmtMin(by[t.id])}">${p >= 14 ? Math.round(p) + "%" : ""}</span>`; }).join("")}
+    </div>
+    <div class="legend legend-col">${parts.map((t) => `<span><i style="background:${t.color}"></i>${t.emoji} ${t.name}<em>${fmtMin(by[t.id])} · ${n[t.id]} ${n[t.id] === 1 ? "vez" : "veces"}${by[t.id] / total * 100 < 14 ? ` · ${Math.round((by[t.id] / total) * 100)}%` : ""}</em></span>`).join("")}</div>`;
+  }
+
+  /* Barras horizontales: zonas trabajadas en el gimnasio */
+  function zonesChart(list) {
+    const cnt = {};
+    list.filter((s) => typeOf(s) === "gym").forEach((s) => areasOf(s).forEach((a) => (cnt[a] = (cnt[a] || 0) + 1)));
+    const rows = CATEGORIES.filter((c) => cnt[c.id]).sort((a, b) => cnt[b.id] - cnt[a.id]);
+    if (!rows.length) return `<div class="empty small-empty">Cuando entrenes o apuntes una sesión de gimnasio, aquí verás qué partes del cuerpo has trabajado.</div>`;
+    const max = Math.max(...rows.map((c) => cnt[c.id]));
+    const missing = CATEGORIES.filter((c) => !cnt[c.id] && c.id !== "full");
+    return `<div class="hbars">${rows.map((c) => `<div class="hbar"><span class="hl">${c.emoji} ${esc(c.name)}</span>
+        <span class="track"><span class="fill" style="width:${(cnt[c.id] / max) * 100}%"></span></span><b>${cnt[c.id]}</b></div>`).join("")}</div>
+      ${missing.length && missing.length < 8 ? `<p class="small muted" style="margin:12px 0 0">💡 Este mes aún no has trabajado: ${missing.map((c) => esc(c.name.toLowerCase())).join(", ")}.</p>` : ""}`;
+  }
+
+  /* Ánimo: cuántas veces cada carita */
+  function feelChart(list) {
+    if (!list.length) return `<div class="empty small-empty">Sin datos este mes.</div>`;
+    const cnt = [0, 0, 0, 0, 0]; list.forEach((s) => cnt[(s.feeling || 3) - 1]++);
+    const max = Math.max(...cnt), avg = list.reduce((a, s) => a + (s.feeling || 3), 0) / list.length;
+    const fa = FEELINGS[Math.round(avg) - 1];
+    return `<div class="feelbars">${FEELINGS.map((f, i) => `<div class="fb" title="${f.t}: ${cnt[i]}">
+        <span class="fv">${cnt[i] || ""}</span><span class="col"><span style="height:${max ? (cnt[i] / max) * 100 : 0}%"></span></span>
+        <span class="fe">${f.e}</span><span class="ft">${f.t}</span></div>`).join("")}</div>
+      <p class="center" style="margin:10px 0 0">De media te has sentido: <strong>${fa.e} ${fa.t}</strong></p>`;
+  }
+
+  /* Logros */
+  function badges() {
+    const S = db.sessions, n = S.length, mins = S.reduce((a, s) => a + (s.minutes || 0), 0);
+    const streak = weekStreak(), bestStreak = bestWeekStreak();
+    const areas = new Set(S.filter((s) => typeOf(s) === "gym").flatMap(areasOf));
+    const km = S.filter((s) => typeOf(s) === "paseo").reduce((a, s) => a + (s.km || 0), 0);
+    const balance = S.filter((s) => areasOf(s).includes("equilibrio")).length;
+    const types = new Set(S.map(typeOf));
+    const list = [
+      ["🌱", "Primer paso", "Tu primera actividad", n, 1],
+      ["🎯", "Constante", "10 actividades", n, 10],
+      ["🏅", "Imparable", "25 actividades", n, 25],
+      ["🏆", "Campeona", "50 actividades", n, 50],
+      ["🔥", "En racha", "2 semanas seguidas", Math.max(streak, bestStreak), 2],
+      ["💪", "Hábito", "4 semanas seguidas", Math.max(streak, bestStreak), 4],
+      ["🌟", "Estrella", "8 semanas seguidas", Math.max(streak, bestStreak), 8],
+      ["⏱️", "10 horas", "600 minutos en total", mins, 600],
+      ["🧭", "Exploradora", "5 zonas del cuerpo distintas", areas.size, 5],
+      ["⚖️", "Equilibrista", "10 sesiones de equilibrio", balance, 10],
+      ["🚶‍♀️", "Caminante", "20 km de paseo", km, 20],
+      ["🎨", "Variada", "3 tipos de actividad", types.size, 3],
+    ];
+    const got = list.filter(([, , , v, goal]) => v >= goal).length;
+    return { got, total: list.length, html: `<div class="badges">${list.map(([e, t, d, v, goal]) => {
+      const ok = v >= goal, pct = Math.min(100, Math.round((v / goal) * 100));
+      return `<div class="badge ${ok ? "ok" : ""}" title="${esc(d)}"><span class="be">${e}</span><strong>${t}</strong><span class="bd">${d}</span>
+        ${ok ? `<span class="bdone">✓ Conseguido</span>` : `<span class="bprog"><span style="width:${pct}%"></span></span>`}</div>`;
+    }).join("")}</div>` };
+  }
+  function bestWeekStreak() {
+    const weeks = [...new Set(db.sessions.map((s) => dateKey(weekStart(new Date(s.date)))))].sort();
+    let best = 0, cur = 0, prev = null;
+    weeks.forEach((k) => {
+      const d = parseKey(k);
+      cur = prev && (d - prev) / 864e5 < 8 ? cur + 1 : 1;
+      best = Math.max(best, cur); prev = d;
+    });
+    return best;
+  }
+
   function viewHistory() {
     const y = histMonth.getFullYear(), m = histMonth.getMonth();
-    const monthSessions = db.sessions.filter((s) => { const d = new Date(s.date); return d.getFullYear() === y && d.getMonth() === m; })
+    const list = db.sessions.filter((s) => { const d = new Date(s.date); return d.getFullYear() === y && d.getMonth() === m; })
       .sort((a, b) => b.date.localeCompare(a.date));
-    const minutes = monthSessions.reduce((a, s) => a + (s.minutes || 0), 0);
+    const minutes = list.reduce((a, s) => a + (s.minutes || 0), 0);
+    const days = new Set(list.map((s) => s.date.slice(0, 10))).size;
+    const km = list.reduce((a, s) => a + (s.km || 0), 0);
     const first = new Date(y, m, 1);
-    const offset = (first.getDay() + 6) % 7;
-    const daysIn = new Date(y, m + 1, 0).getDate();
+    const offset = (first.getDay() + 6) % 7, daysIn = new Date(y, m + 1, 0).getDate();
     const todayK = dateKey(new Date());
     let cells = DAYS_SHORT.map((d) => `<div class="wd">${d}</div>`).join("");
     for (let i = 0; i < offset; i++) cells += `<div class="cd out"></div>`;
     for (let d = 1; d <= daysIn; d++) {
       const k = dateKey(new Date(y, m, d));
-      cells += `<div class="cd ${sessionsOn(k).length ? "has" : ""} ${k === todayK ? "today" : ""}">${d}</div>`;
+      const ts = [...new Set(sessionsOn(k).map(typeOf))];
+      cells += `<div class="cd ${ts.length ? "has" : ""} ${k === todayK ? "today" : ""}">${d}
+        ${ts.length ? `<span class="dots">${ts.slice(0, 3).map((t) => `<i style="background:${ACT[t].color}"></i>`).join("")}</span>` : ""}</div>`;
     }
     const monthName = first.toLocaleDateString("es-ES", { month: "long", year: "numeric" }).replace(/^./, (c) => c.toUpperCase()).replace(" de ", " ");
     const isCurrent = y === new Date().getFullYear() && m === new Date().getMonth();
+    const streak = weekStreak();
+    const b = badges();
     return {
       title: "Mi diario",
       html: `
-        <div class="stats">
-          <div class="stat"><b>${monthSessions.length}</b><span>sesiones este mes</span></div>
-          <div class="stat"><b>${minutes}</b><span>minutos este mes</span></div>
-          <div class="stat"><b>${weekStreak()}</b><span>semanas seguidas</span></div>
+        <div class="month-nav">
+          <button class="mini-btn" data-act="h-month" data-d="-1" aria-label="Mes anterior"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+          <strong>${esc(monthName)}</strong>
+          <button class="mini-btn" data-act="h-month" data-d="1" aria-label="Mes siguiente" ${isCurrent ? "disabled style='opacity:.35'" : ""}><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
+        </div>
+        <div class="kpis">
+          <div class="kpi"><span>Actividades</span><b>${list.length}</b></div>
+          <div class="kpi"><span>Tiempo activa</span><b>${minutes >= 60 ? `${Math.floor(minutes / 60)}<small> h</small> ${minutes % 60}<small> min</small>` : `${minutes}<small> min</small>`}</b></div>
+          <div class="kpi"><span>Días activos</span><b>${days}<small> de ${isCurrent ? new Date().getDate() : daysIn}</small></b></div>
+          <div class="kpi"><span>${km ? "Kilómetros" : "Logros"}</span><b>${km ? km.toLocaleString("es-ES", { maximumFractionDigits: 1 }) : `${b.got}<small> de ${b.total}</small>`}</b></div>
+        </div>
+        ${streak ? `<div class="streak">🔥 <span><strong>${streak} ${streak === 1 ? "semana" : "semanas seguidas"}</strong> activa. ¡Sigue así!</span></div>` : ""}
+        <div class="section card">
+          <h3 class="card-title">Minutos por semana</h3>
+          <p class="small muted card-sub">Últimas 8 semanas. Toca una columna para ver el detalle.</p>
+          <div id="wkChart">${weeklyChart()}</div>
         </div>
         <div class="section card">
-          <div class="cal-head">
-            <button class="mini-btn" data-act="h-month" data-d="-1" aria-label="Mes anterior"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
-            <strong>${esc(monthName)}</strong>
-            <button class="mini-btn" data-act="h-month" data-d="1" aria-label="Mes siguiente" ${isCurrent ? "disabled style='opacity:.35'" : ""}><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
-          </div>
+          <h3 class="card-title">Tus actividades del mes</h3>
+          ${mixBar(list)}
+        </div>
+        <div class="section card">
+          <h3 class="card-title">Partes del cuerpo trabajadas</h3>
+          <p class="small muted card-sub">Sesiones de gimnasio de este mes.</p>
+          ${zonesChart(list)}
+        </div>
+        <div class="section card">
+          <h3 class="card-title">¿Cómo te has sentido?</h3>
+          ${feelChart(list)}
+        </div>
+        <div class="section card">
+          <div class="cal-head"><h3 class="card-title" style="margin:0">Calendario</h3></div>
           <div class="cal">${cells}</div>
         </div>
-        <button class="btn ghost block section" data-act="add-manual">✍️ Apuntar otra actividad (paseo, natación…)</button>
-        <div class="section"><h3 class="section-title">Sesiones de ${esc(first.toLocaleDateString("es-ES", { month: "long" }))}</h3>
-          <div class="stack">${monthSessions.length ? monthSessions.map((s) => logItem(s)).join("") : `<div class="empty"><div class="big">📅</div><p>No hay sesiones este mes todavía.<br>¡Cada entrenamiento que termines aparecerá aquí!</p></div>`}</div>
+        <div class="section card">
+          <h3 class="card-title">Logros <span class="muted small">${b.got} de ${b.total}</span></h3>
+          ${b.html}
+        </div>
+        <div class="section"><h3 class="section-title">Actividades de ${esc(first.toLocaleDateString("es-ES", { month: "long" }))}</h3>
+          <div class="stack">${list.length ? list.map((s) => logItem(s)).join("") : `<div class="empty"><div class="big">📅</div><p>No hay actividades este mes todavía.<br>Pulsa el botón <strong>＋</strong> de abajo para apuntar la primera.</p></div>`}</div>
         </div>`,
+      after() {
+        const box = $("#wkChart");
+        box?.addEventListener("click", (e) => {
+          const g = e.target.closest("[data-wk]"); if (!g) return;
+          box.innerHTML = weeklyChart(+g.dataset.wk);
+        });
+        box?.addEventListener("keydown", (e) => {
+          const g = e.target.closest("[data-wk]");
+          if (g && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); box.innerHTML = weeklyChart(+g.dataset.wk); }
+        });
+      },
     };
-  }
-  function openManualSheet() {
-    const types = [["🚶‍♀️", "Paseo"], ["🧘‍♀️", "Yoga"], ["🏊‍♀️", "Natación"], ["🚴‍♀️", "Bici"], ["🏋️‍♀️", "Gimnasio"]];
-    const st = { t: 0, feeling: 3, minutes: 30 };
-    openSheet(`<h2>Apuntar actividad</h2>
-      <div class="stack">
-        <div class="chips" style="flex-wrap:wrap;overflow:visible;margin:0;padding:0">${types.map(([e, t], i) => `<button class="chip ${i === 0 ? "on" : ""}" data-mt="${i}">${e} ${t}</button>`).join("")}</div>
-        <label class="field"><span>Día</span><input class="input" type="date" id="mDate" value="${dateKey(new Date())}" max="${dateKey(new Date())}"></label>
-        <div class="switch-row card"><strong>Minutos</strong><span class="stepper"><button data-mm="-5">−</button><output id="mMin">30</output><button data-mm="5">+</button></span></div>
-        <div><strong>¿Cómo te has sentido?</strong><div class="feel" style="margin-top:8px">${FEELINGS.map((f, i) => `<button data-mf="${i + 1}" class="${i === 2 ? "on" : ""}"><span class="e">${f.e}</span>${f.t}</button>`).join("")}</div></div>
-        <label class="field"><span>Nota (opcional)</span><textarea class="input" id="mNote" maxlength="200" placeholder="Ej.: Paseo por el parque con Carmen"></textarea></label>
-        <button class="btn block green" id="mSave">Guardar</button>
-      </div>`, (sheet) => {
-      sheet.addEventListener("click", (e) => {
-        const t = e.target.closest("[data-mt]"), mm = e.target.closest("[data-mm]"), mf = e.target.closest("[data-mf]");
-        if (t) { st.t = +t.dataset.mt; $$("[data-mt]", sheet).forEach((c) => c.classList.toggle("on", c === t)); }
-        if (mm) { st.minutes = Math.max(5, Math.min(300, st.minutes + +mm.dataset.mm)); $("#mMin", sheet).textContent = st.minutes; }
-        if (mf) { st.feeling = +mf.dataset.mf; $$("[data-mf]", sheet).forEach((c) => c.classList.toggle("on", c === mf)); }
-      });
-      $("#mSave", sheet).addEventListener("click", () => {
-        const dk = $("#mDate", sheet).value || dateKey(new Date());
-        const d = parseKey(dk); const now = new Date(); d.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
-        db.sessions.push({ id: uid(), date: localStamp(d), routineId: null, name: types[st.t][1], emoji: types[st.t][0], minutes: st.minutes, feeling: st.feeling, note: $("#mNote", sheet).value.trim() });
-        save(); closeSheet(); toast("✅ ¡Apuntado en tu diario!"); router();
-      });
-    });
   }
 
   /* ---------- Ajustes ---------- */
@@ -1006,6 +1299,8 @@
         </div>
         <div style="width:100%;text-align:left;margin-top:14px"><strong>¿Cómo te has sentido?</strong>
           <div class="feel" style="margin-top:8px">${FEELINGS.map((f, i) => `<button data-act="p-feel" data-v="${i + 1}" class="${i === 2 ? "on" : ""}"><span class="e">${f.e}</span>${f.t}</button>`).join("")}</div></div>
+        <div style="width:100%;text-align:left;margin-top:12px"><strong>Esfuerzo</strong>
+          <div class="seg seg-icons" style="margin-top:8px">${INTENSITY.map(([e, t], i) => `<button data-act="p-int" data-v="${i + 1}" class="${i === 1 ? "on" : ""}"><span class="se">${e}</span>${t}</button>`).join("")}</div></div>
         <label class="field" style="width:100%;text-align:left;margin-top:10px"><span>Nota (opcional)</span>
           <textarea class="input" id="pNote" maxlength="200" placeholder="Ej.: Hoy he subido a 3 kg en el curl"></textarea></label>
       </div>
@@ -1018,8 +1313,9 @@
   function saveSession() {
     db.sessions.push({
       id: uid(), date: localStamp(),
-      routineId: P.r.id, name: P.r.name, emoji: P.r.emoji || "🏋️‍♀️",
-      minutes: P.minutes, exercises: P.done.size, total: P.total,
+      type: "gym", routineId: P.r.id, name: P.r.name, emoji: P.r.emoji || "🏋️‍♀️",
+      areas: areasOfRoutine(P.r), intensity: P.intensity || 2,
+      minutes: P.minutes, exercises: Math.max(0, P.done.size - [...P.done].filter((i) => i < P.warm).length), total: P.total - P.warm,
       feeling: P.feeling, note: ($("#pNote")?.value || "").trim(),
     });
     save();
@@ -1104,7 +1400,9 @@
     },
     // historial
     "h-month": (el) => { histMonth.setMonth(histMonth.getMonth() + +el.dataset.d); router(); },
-    "add-manual": () => openManualSheet(),
+    "add-manual": () => openActivitySheet(),
+    "add-activity": () => { if (!P) openActivitySheet(); },
+    "edit-session": (el) => { const s = db.sessions.find((x) => x.id === el.dataset.id); if (s) openActivitySheet(s); },
     "del-session": (el) => confirmSheet("¿Borrar esta sesión?", "Se quitará de tu diario.", "Sí, borrar", () => {
       db.sessions = db.sessions.filter((s) => s.id !== el.dataset.id); save(); router();
     }, true),
@@ -1123,6 +1421,7 @@
     "p-skip": () => skipExercise(),
     "p-toggle": () => toggleTimer(),
     "p-more": () => { P.t.endAt += 15000; P.t.total += 15; updateRing(P.t.endAt - Date.now()); },
+    "p-int": (el) => { P.intensity = +el.dataset.v; $$("[data-act='p-int']").forEach((b) => b.classList.toggle("on", b === el)); },
     "p-feel": (el) => { P.feeling = +el.dataset.v; $$("[data-act='p-feel']").forEach((b) => b.classList.toggle("on", b === el)); },
     "p-save": () => saveSession(),
     "p-end": () => { closeSheet(); finish(); },
