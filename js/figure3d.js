@@ -357,7 +357,9 @@
     scene.add(stage);
 
     // suelo
-    const floor = new THREE.Mesh(new THREE.CircleGeometry(3, 64), new THREE.MeshStandardMaterial({ color: COL.floor, roughness: 1 }));
+    const cssFloor = getComputedStyle(document.documentElement).getPropertyValue("--surface-3").trim();
+    const floor = new THREE.Mesh(new THREE.CircleGeometry(3, 64), new THREE.MeshStandardMaterial({ color: cssFloor || COL.floor, roughness: 1 }));
+    floor.visible = !opts.noFloor;
     floor.rotation.x = -Math.PI / 2; floor.position.y = -0.001;
     stage.add(floor);
     // sombra suave
