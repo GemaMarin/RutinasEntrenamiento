@@ -15,7 +15,7 @@
     shW: 0.175, shY: 0.23, upper: 0.28, fore: 0.25, hand: 0.07,
   };
   const COL = {
-    skin: 0xF2C6A6, shirt: 0xE07A5F, pants: 0x3D4466, shoe: 0xF7F3EE, sole: 0x8C8C9A,
+    skin: 0xF2C6A6, shirt: 0xE07A5F, pants: 0x4A5684, shoe: 0xF7F3EE, sole: 0x8C8C9A,
     hair: 0x7A5240, wood: 0xC99A6A, woodDark: 0xA87D52, metal: 0x50566E,
     band: 0x5FB38A, mat: 0x8CC5B3, wall: 0xEFE7DC, floor: 0xF3E9DD,
   };
@@ -292,7 +292,8 @@
     return m;
   }
   function buildWall() {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(2.4, 2.2, 0.06), mat(COL.wall, 0.95));
+    const wm = new THREE.MeshStandardMaterial({ color: 0xF6F2EC, roughness: 1, transparent: true, opacity: 0.55 });
+    const m = new THREE.Mesh(new THREE.BoxGeometry(2.4, 2.2, 0.06), wm);
     m.position.y = 1.1;
     return m;
   }
@@ -347,7 +348,7 @@
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(32, W() / H(), 0.05, 50);
-    scene.add(new THREE.HemisphereLight(0xffffff, 0xE8D8C8, 1.6));
+    scene.add(new THREE.HemisphereLight(0xffffff, 0xE8E2DA, 1.9));
     const sun = new THREE.DirectionalLight(0xffffff, 1.6);
     sun.position.set(2, 4, 3); scene.add(sun);
     const fill = new THREE.DirectionalLight(0xFFE8D8, 0.6);
@@ -469,7 +470,7 @@
     function placeCamera() {
       const aspect = W() / H();
       const fit = Math.max(size.y, Math.max(size.x, size.z) / aspect) * 0.56 + 0.18;
-      const dist = fit / Math.tan((camera.fov * D) / 2);
+      const dist = (fit / Math.tan((camera.fov * D) / 2)) * (opts.zoom || 1);
       camera.position.set(center.x + Math.sin(yaw) * Math.cos(camPitch) * dist, center.y + Math.sin(camPitch) * dist, center.z + Math.cos(yaw) * Math.cos(camPitch) * dist);
       camera.lookAt(center);
     }
