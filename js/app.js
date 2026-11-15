@@ -42,7 +42,7 @@
   const KEY = "mi-gimnasio.v1";
   const DEFAULTS = {
     settings: { name: "", size: "m", voice: true, sound: true, goal: 3, onboarded: false, theme: "salvia" },
-    sessions: [], custom: [], videos: {},
+    sessions: [], custom: [], videos: {}, favs: [],
   };
   let db = load();
   function load() {
@@ -137,20 +137,146 @@
     ? { ...r, items: [...WARMUP, ...r.items], warm: WARMUP.length } : r);
 
   /* ---------------- Plantillas comunes ---------------- */
-  function routineCard(r) {
+  /* ---------- Favoritas y duración ---------- */
+  const HEART = `<svg viewBox="0 0 24 24"><path d="M12 20.3s-7.4-4.5-9.1-9.1C1.7 7.8 4 4.6 7.4 4.6c2 0 3.6 1.1 4.6 2.7 1-1.6 2.6-2.7 4.6-2.7 3.4 0 5.7 3.2 4.5 6.6-1.7 4.6-9.1 9.1-9.1 9.1z"/></svg>`;
+  const SHARE = `<svg viewBox="0 0 24 24"><path d="M12 3v12M7.5 7.5L12 3l4.5 4.5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>`;
+  const isFav = (id) => (db.favs || []).includes(id);
+  const DURS = [["", "Todas"], ["short", "⚡ Hasta 15 min"], ["mid", "⏱ 15–20 min"], ["long", "🔥 Más de 20 min"]];
+  let durFilter = "";
+  const routineMins = (r) => estimate(withWarmup(r));
+  const durOf = (r) => { const m = routineMins(r); return m <= 15 ? "short" : m <= 20 ? "mid" : "long"; };
+  const durChips = () => `<div class="chips dur-chips">${DURS.map(([k, t]) => `<button class="chip ${durFilter === k ? "on" : ""}" data-act="dur" data-v="${k}">${t}</button>`).join("")}</div>`;
+  const catStyle = (c) => (c ? `--c:${c.color};--cbg:${c.bg}` : "--c:var(--primary);--cbg:var(--surface-2)");
+  const favBtn = (id, cls = "") => `<button class="fav ${cls} ${isFav(id) ? "on" : ""}" data-act="fav" data-id="${esc(id)}" aria-label="${isFav(id) ? "Quitar de favoritas" : "Guardar en favoritas"}">${HEART}</button>`;
+
+  function routineCard(r, { showCat = true } = {}) {
+    const c = r.cat ? catOf(r.cat) : null;
     const thumbs = r.items.slice(0, 5).map(([id]) => `<span class="th">${mini(id)}</span>`).join("");
-    return `<a class="routine-card" href="#/rutina/${esc(r.id)}" style="--c:${esc(r.color || "#C4553A")}">
+    return `<a class="routine-card" href="#/rutina/${esc(r.id)}" style="${catStyle(c)}">
       <div class="rc-top"><div class="grow">
+        ${showCat && c ? `<span class="rc-cat">${c.emoji} ${esc(c.name)}</span>` : ""}
         <h3>${esc(r.name)}</h3>
         ${r.desc ? `<p>${esc(r.desc)}</p>` : ""}
-        <div class="meta"><span>⏱ ${estimate(withWarmup(r))} min</span><span>${r.items.length} ejercicios</span><span>${levelDots(routineLevel(r))}</span></div>
-      </div>${CHEV}</div>
+        <div class="meta"><span>⏱ ${routineMins(r)} min</span><span>${r.items.length} ejercicios</span><span>${levelDots(routineLevel(r))}</span></div>
+      </div>${favBtn(r.id)}</div>
       <div class="thumbs">${thumbs}</div></a>`;
   }
+  function miniRoutineCard(r) {
+    const c = r.cat ? catOf(r.cat) : null;
+    return `<a class="mini-routine" href="#/rutina/${esc(r.id)}" style="${catStyle(c)}">
+      <span class="eyebrow-s">${c ? `${c.emoji} ${esc(c.name)}` : "Mi rutina"} · ${routineMins(r)} min</span><h4>${esc(r.name)}</h4>
+      <div class="thumbs">${r.items.slice(0, 4).map(([id]) => `<span class="th">${mini(id)}</span>`).join("")}</div></a>`;
+  }
+  const favRoutines = () => (db.favs || []).map(getRoutine).filter(Boolean);
+
+  /* ---------- Imagen para compartir ---------- */
+  function roundRect(g, x, y, w, h, r) {
+    g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r);
+    g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath();
+  }
+  function wrapText(g, text, x, y, maxW, lh, maxLines = 3) {
+    const words = String(text).split(" "); let line = "", lines = [];
+    words.forEach((w) => { const t = line ? line + " " + w : w; if (g.measureText(t).width > maxW && line) { lines.push(line); line = w; } else line = t; });
+    lines.push(line); lines = lines.slice(0, maxLines);
+    lines.forEach((l, i) => g.fillText(l, x, y + i * lh));
+    return lines.length;
+  }
+  const loadImg = (src) => new Promise((res) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
+  async function sessionImage(s) {
+    const W = 1080, H = 1350, cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+    const g = cv.getContext("2d");
+    try { await document.fonts?.ready; } catch (e) { /* sin fuentes */ }
+    const F = (w, px) => `${w} ${px}px "Plus Jakarta Sans", system-ui, sans-serif`;
+    const t = ACT[typeOf(s)], r = s.routineId && getRoutine(s.routineId), c = r?.cat ? catOf(r.cat) : null;
+    const accent = c?.color || t.color, pastel = c?.bg || "#E9F3EE";
+    const bgGr = g.createLinearGradient(0, 0, W, H); bgGr.addColorStop(0, pastel); bgGr.addColorStop(1, "#FFFFFF");
+    g.fillStyle = bgGr; g.fillRect(0, 0, W, H);
+    g.fillStyle = accent; g.globalAlpha = .12;
+    g.beginPath(); g.arc(W - 120, 140, 220, 0, 7); g.fill();
+    g.beginPath(); g.arc(90, H - 120, 180, 0, 7); g.fill(); g.globalAlpha = 1;
+    // marca
+    g.fillStyle = "#1D2925"; g.font = F(800, 40); g.textAlign = "left"; g.fillText("Mi Gimnasio en Casa", 80, 110);
+    // tarjeta
+    g.save(); g.shadowColor = "rgba(20,30,25,.12)"; g.shadowBlur = 50; g.shadowOffsetY = 18;
+    roundRect(g, 70, 160, W - 140, H - 300, 56); g.fillStyle = "#FFFFFF"; g.fill(); g.restore();
+    // ilustración
+    const cx = W / 2, cy = 430;
+    g.fillStyle = pastel; g.beginPath(); g.arc(cx, cy, 190, 0, 7); g.fill();
+    const img = r ? await loadImg(miniSrc(r.items[0][0])) : null;
+    if (img) {
+      g.save(); g.beginPath(); g.arc(cx, cy, 190, 0, 7); g.clip();
+      g.drawImage(img, cx - 245, cy - 255, 490, 490); g.restore();
+    } else {
+      g.font = F(400, 190); g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(t.emoji, cx, cy + 10); g.textBaseline = "alphabetic";
+    }
+    // fecha y título
+    const d = new Date(s.date);
+    g.textAlign = "center"; g.fillStyle = accent; g.font = F(800, 34);
+    g.fillText(d.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" }).toUpperCase(), cx, 700);
+    g.fillStyle = "#1D2925"; g.font = F(800, 70);
+    const nl = wrapText(g, s.name || t.name, cx, 790, W - 260, 82, 2);
+    // datos
+    const f = FEELINGS[(s.feeling || 3) - 1];
+    const stats = [["⏱", fmtMin(s.minutes || 0), "de actividad"]];
+    if (s.km) stats.push(["👟", `${s.km.toLocaleString("es-ES")} km`, "recorridos"]);
+    else if (s.total) stats.push(["💪", `${s.exercises ?? s.total}`, "ejercicios"]);
+    else {
+      const ws = weekStart(new Date(s.date)), n = db.sessions.filter((x) => { const dx = new Date(x.date); return dx >= ws && x.date <= s.date; }).length;
+      stats.push(["📅", `${Math.max(1, n)}ª`, "de la semana"]);
+    }
+    stats.push([f.e, f.t, "me he sentido"]);
+    const y0 = 790 + nl * 82 + 40, bw = 270, gap = 24, x0 = cx - (bw * 3 + gap * 2) / 2;
+    stats.forEach(([e, v, l], i) => {
+      const x = x0 + i * (bw + gap);
+      roundRect(g, x, y0, bw, 230, 36); g.fillStyle = pastel; g.fill();
+      g.textAlign = "center"; g.font = F(400, 60); g.fillStyle = "#1D2925"; g.fillText(e, x + bw / 2, y0 + 82);
+      g.font = F(800, 40); g.fillText(v, x + bw / 2, y0 + 150);
+      g.font = F(600, 28); g.fillStyle = "#56645F"; g.fillText(l, x + bw / 2, y0 + 195);
+    });
+    // pie
+    const streak = weekStreak();
+    g.textAlign = "center"; g.fillStyle = "#56645F"; g.font = F(700, 36);
+    const who = db.settings.name ? `${db.settings.name}` : "";
+    const foot = streak >= 2 ? `🔥 ${streak} semanas seguidas activa` : "💚 Cada día un poco mejor";
+    g.fillText(who ? `${who} · ${foot}` : foot, cx, H - 70);
+    return new Promise((res) => cv.toBlob(res, "image/png"));
+  }
+  async function shareSession(s) {
+    const blob = await sessionImage(s);
+    if (!blob) { toast("No se ha podido crear la imagen"); return; }
+    const file = new File([blob], `mi-actividad-${s.date.slice(0, 10)}.png`, { type: "image/png" });
+    const text = `${s.name} · ${fmtMin(s.minutes || 0)} 💪`;
+    try {
+      if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: s.name, text }); return; }
+    } catch (e) { if (e.name === "AbortError") return; }
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = file.name;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+    toast("📥 Imagen guardada. Ya puedes enviarla");
+  }
+  /* Después de guardar: tarjeta para compartir (y logro nuevo si lo hay) */
+  function afterSave(rec, before) {
+    const fresh = achievementsState().list.filter((b) => b.ok && !before.includes(b.id));
+    const b = fresh[fresh.length - 1];
+    if (b) beep(true);
+    setTimeout(() => {
+      openSheet(`<div class="saved-sheet">
+        <div class="saved-top"><span class="saved-ok">${ICON.check}</span><div><strong>¡Guardado en tu diario!</strong><span class="small muted">¿Quieres compartirlo con alguien?</span></div></div>
+        ${b ? `<button class="new-badge" data-act="badge" data-id="${b.id}">${medal(b, "sm")}<span class="grow"><span class="eyebrow-s">¡Nuevo logro!</span><strong>${esc(b.name)}</strong><span class="small muted">${esc(b.desc)}</span></span></button>` : ""}
+        <div class="share-preview"><div class="sp-loading">Preparando la imagen…</div><img id="shImg" alt="Tarjeta de la actividad" hidden></div>
+        <button class="btn block huge" id="shGo">${SHARE} Compartir</button>
+        <button class="btn ghost block" data-act="close-sheet">Ahora no</button></div>`, async (sh) => {
+        $("#shGo", sh).addEventListener("click", () => shareSession(rec));
+        const blob = await sessionImage(rec);
+        const im = $("#shImg", sh);
+        if (blob && im) { im.src = URL.createObjectURL(blob); im.hidden = false; $(".sp-loading", sh)?.remove(); }
+      });
+    }, 350);
+  }
+
   function exItem(ex, { right = "", href = true, num = "" } = {}) {
     const z = ZONES[ex.zone];
     const inner = `${num ? `<span class="num">${num}</span>` : ""}
-      <div class="tile pic" style="--c:${z.color}">${mini(ex.id)}</div>
+      <div class="tile pic" style="background:${catOf(ex.zone)?.bg || "var(--surface-2)"}">${mini(ex.id)}</div>
       <div class="grow"><h4>${esc(ex.name)}</h4><div class="sub">${right || `${ex.equip.map((e) => EQUIP[e].emoji).join(" ")} ${esc(EQUIP[ex.equip[0]].name)} · ${LEVELS[ex.level]}`}</div></div>`;
     return href
       ? `<a class="ex-item" href="#/ejercicio/${ex.id}">${inner}${CHEV}</a>`
@@ -221,7 +347,7 @@
       const c = catOf(planned.cat);
       const imgs = planned.items.slice(0, 3).map(([id]) => `<img src="${miniSrc(id)}" alt="">`).join("");
       card = `<div class="tcard">
-        <div class="today-art"><span class="badge-day">Hoy · ${esc(c.name)}</span>${imgs}</div>
+        <div class="today-art" style="${catStyle(c)}"><span class="badge-day">${c.emoji} Hoy · ${esc(c.name)}</span>${imgs}</div>
         <div class="today-body">
           <h3>${esc(planned.name)}</h3>
           <p>${planned.items.length} ejercicios · unos ${estimate(withWarmup(planned))} minutos · ${LEVELS[routineLevel(planned)].toLowerCase()}</p>
@@ -252,9 +378,8 @@
       if (r && !seen.has(r.id)) { seen.add(r.id); recent.push(r); }
     });
     const again = recent.length ? recent.slice(0, 4) : ["full-1", "bal-1", "mob-2"].map(getRoutine).filter(Boolean);
-    const againCards = again.map((r) => `<a class="mini-routine" href="#/rutina/${esc(r.id)}">
-        <span class="eyebrow-s">${esc(r.cat ? catOf(r.cat).name : "Mi rutina")}</span><h4>${esc(r.name)}</h4>
-        <div class="thumbs">${r.items.slice(0, 4).map(([id]) => `<span class="th">${mini(id)}</span>`).join("")}</div></a>`).join("");
+    const againCards = again.map(miniRoutineCard).join("");
+    const favs = favRoutines();
 
     return {
       title: "",
@@ -267,10 +392,14 @@
           <div class="progress"><span style="width:${Math.min(100, (nWeek / goal) * 100)}%"></span></div>
         </div>
         <div class="section quick-stats">
-          <a class="qs" href="#/historial"><b>${minsWeek}<small> min</small></b><span>esta semana</span></a>
-          <a class="qs" href="#/historial"><b>${streak}<small> ${streak === 1 ? "sem." : "sem."}</small></b><span>de racha</span></a>
-          <a class="qs" href="#/logros"><b>${ach.got}<small> / ${ach.total}</small></b><span>logros</span></a>
+          <a class="qs qs-a" href="#/historial"><b>${minsWeek}<small> min</small></b><span>esta semana</span></a>
+          <a class="qs qs-b" href="#/historial"><b>${streak}<small> ${streak === 1 ? "sem." : "sem."}</small></b><span>de racha</span></a>
+          <a class="qs qs-c" href="#/logros"><b>${ach.got}<small> / ${ach.total}</small></b><span>logros</span></a>
         </div>
+        ${favs.length ? `<div class="section">
+          <h3 class="section-title">❤️ Tus favoritas <a href="#/rutinas">Ver todas</a></h3>
+          <div class="hscroll">${favs.map(miniRoutineCard).join("")}</div>
+        </div>` : ""}
         <div class="section">
           <h3 class="section-title">${recent.length ? "Volver a hacer" : "Para empezar"} <a href="#/rutinas">Ver todas</a></h3>
           <div class="hscroll">${againCards}</div>
@@ -281,41 +410,59 @@
   function categoryGrid() {
     return `<div class="cat-grid">${CATEGORIES.map((c) => {
       const n = ROUTINES.filter((r) => r.cat === c.id).length;
-      return `<a class="cat" href="#/categoria/${c.id}">
-        <span class="cat-img"><img src="${miniSrc(CAT_IMG[c.id])}" alt="" loading="lazy"></span>
+      return `<a class="cat" href="#/categoria/${c.id}" style="${catStyle(c)}">
+        <span class="cat-img"><span class="cat-emoji">${c.emoji}</span><img src="${miniSrc(CAT_IMG[c.id])}" alt="" loading="lazy"></span>
         <span class="cat-txt"><strong>${esc(c.name)}</strong><span class="n">${n} rutinas</span></span></a>`;
     }).join("")}</div>`;
   }
 
   function viewRoutines() {
+    const favs = favRoutines();
     const custom = db.custom.length
-      ? `<div class="routine-list">${db.custom.map(routineCard).join("")}</div>`
+      ? `<div class="routine-list">${db.custom.map((r) => routineCard(r)).join("")}</div>`
       : `<div class="card center"><p class="muted" style="margin:0">Aún no has creado ninguna rutina propia.</p></div>`;
+    const filtered = durFilter ? allRoutines().filter((r) => durOf(r) === durFilter).sort((x, y) => routineMins(x) - routineMins(y)) : [];
     return {
       title: "Entrenar",
       html: `
-        <div class="seg top-seg"><a href="#/rutinas" class="on">Rutinas</a><a href="#/ejercicios" class="">Ejercicios</a></div>
-        <p class="muted" style="margin-top:4px">Elige qué quieres trabajar y luego la rutina que más te apetezca. Todas tienen 4 o 5 ejercicios.</p>
-        <div class="section" style="margin-top:12px">${categoryGrid()}</div>
+        <div class="seg top-seg"><a href="#/rutinas" class="on">Rutinas</a><a href="#/ejercicios">Ejercicios</a></div>
+        <div class="section" style="margin-top:4px">
+          <h3 class="section-title">❤️ Tus favoritas</h3>
+          ${favs.length ? `<div class="hscroll">${favs.map(miniRoutineCard).join("")}</div>`
+            : `<div class="fav-empty">Pulsa el ${HEART} de una rutina para tenerla siempre a mano aquí.</div>`}
+        </div>
         <div class="section">
-          <h3 class="section-title">Mis rutinas</h3>
-          ${custom}
-          <a class="btn ghost block" style="margin-top:12px" href="#/crear">➕ Crear mi propia rutina</a>
-        </div>`,
+          <h3 class="section-title">¿Cuánto tiempo tienes?</h3>
+          ${durChips()}
+        </div>
+        ${durFilter
+          ? `<div class="section" style="margin-top:8px"><p class="small muted" style="margin:0 0 10px">${filtered.length} rutinas · ordenadas de más corta a más larga</p>
+              <div class="routine-list">${filtered.map((r) => routineCard(r)).join("")}</div></div>`
+          : `<div class="section" style="margin-top:8px">
+              <h3 class="section-title">¿Qué quieres trabajar?</h3>${categoryGrid()}</div>
+             <div class="section">
+              <h3 class="section-title">Mis rutinas</h3>
+              ${custom}
+              <a class="btn ghost block" style="margin-top:12px" href="#/crear">➕ Crear mi propia rutina</a>
+            </div>`}`,
     };
   }
 
   function viewCategory(id) {
     const c = catOf(id);
     if (!c) return notFound();
-    const list = ROUTINES.filter((r) => r.cat === id);
+    const all = ROUTINES.filter((r) => r.cat === id);
+    const list = durFilter ? all.filter((r) => durOf(r) === durFilter) : all;
     return {
       title: c.name, back: true,
       html: `
-        <div class="detail-head"><div class="tile lg">${mini(CAT_IMG[c.id])}</div>
-          <div><h2>${esc(c.name)}</h2><p class="muted" style="margin:4px 0 0">${esc(c.desc)}</p></div></div>
-        <p class="muted small">Elige la que más te apetezca hoy. Puedes ir cambiando para no aburrirte.</p>
-        <div class="routine-list">${list.map(routineCard).join("")}</div>`,
+        <div class="cat-hero" style="${catStyle(c)}">
+          <div class="ch-img">${mini(CAT_IMG[c.id])}</div>
+          <div><span class="ch-emoji">${c.emoji}</span><h2>${esc(c.name)}</h2><p>${esc(c.desc)}</p></div>
+        </div>
+        <div class="section">${durChips()}</div>
+        <div class="routine-list" style="margin-top:6px">${list.length ? list.map((r) => routineCard(r, { showCat: false })).join("")
+          : `<div class="card center muted">No hay rutinas de esta duración aquí. Prueba con otra.</div>`}</div>`,
     };
   }
 
@@ -333,8 +480,9 @@
     return {
       title: r.name, back: true, cta: true, parent: c ? `#/categoria/${c.id}` : "#/rutinas",
       html: `
-        <div class="detail-head"><div class="tile lg">${r.items[0] ? mini(r.items[0][0]) : ""}</div>
-          <div>${c ? `<div class="eyebrow-s">${esc(c.name)}</div>` : ""}<h2>${esc(r.name)}</h2>${r.desc ? `<p class="muted" style="margin:4px 0 0">${esc(r.desc)}</p>` : ""}</div></div>
+        <div class="detail-head"><div class="tile lg" style="background:${c?.bg || "var(--surface-2)"}">${r.items[0] ? mini(r.items[0][0]) : ""}</div>
+          <div class="grow">${c ? `<div class="eyebrow-s">${c.emoji} ${esc(c.name)}</div>` : ""}<h2>${esc(r.name)}</h2>${r.desc ? `<p class="muted" style="margin:4px 0 0">${esc(r.desc)}</p>` : ""}</div>
+          ${favBtn(r.id, "big")}</div>
         <div class="tags">
           <span class="tag">⏱ ${estimate(withWarmup(r))} min</span>
           <span class="tag">${r.items.length} ejercicios</span>
@@ -409,7 +557,7 @@
         <p class="lead" style="margin-top:14px">${esc(ex.summary)} <span class="tag">🎯 ${amountText(ex, ex.reps || ex.secs)}</span></p>
         <div class="section"><h3 class="section-title">Cómo se hace</h3><div class="stack">${howToHTML(ex)}</div></div>
         <div class="section"><h3 class="section-title">Vídeo</h3>${videoBlock(ex)}</div>
-        ${usedIn.length ? `<div class="section"><h3 class="section-title">Aparece en estas rutinas</h3><div class="routine-list">${usedIn.slice(0, 6).map(routineCard).join("")}</div></div>` : ""}
+        ${usedIn.length ? `<div class="section"><h3 class="section-title">Aparece en estas rutinas</h3><div class="routine-list">${usedIn.slice(0, 6).map((r) => routineCard(r)).join("")}</div></div>` : ""}
         <div class="sticky-cta"><div><button class="btn block" data-act="try-ex" data-id="${ex.id}">${ICON.play} Probar este ejercicio</button></div></div>`,
     };
   }
@@ -453,7 +601,7 @@
     box.innerHTML = B.items.length ? B.items.map(([id, sets, amt], i) => {
       const ex = EX[id];
       return `<div class="builder-item">
-        <div class="top"><span class="tile pic" style="--c:${ZONES[ex.zone].color};width:48px;height:48px;border-radius:12px">${mini(ex.id)}</span>
+        <div class="top"><span class="tile pic" style="background:${catOf(ex.zone)?.bg};width:48px;height:48px;border-radius:12px">${mini(ex.id)}</span>
           <h4>${esc(ex.name)}</h4>
           <button class="mini-btn" data-act="b-move" data-i="${i}" data-d="-1" aria-label="Subir" ${i === 0 ? "disabled style='opacity:.35'" : ""}><svg viewBox="0 0 24 24"><path d="M18 15l-6-6-6 6"/></svg></button>
           <button class="mini-btn" data-act="b-move" data-i="${i}" data-d="1" aria-label="Bajar" ${i === B.items.length - 1 ? "disabled style='opacity:.35'" : ""}><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
@@ -472,7 +620,7 @@
       $("#pkList", sheet).innerHTML = list.map((e) => {
         const n = B.items.filter(([id]) => id === e.id).length;
         return `<button class="ex-item" style="width:100%;border:0;text-align:left" data-act="b-pick" data-id="${e.id}">
-          <div class="tile pic" style="--c:${ZONES[e.zone].color}">${mini(e.id)}</div>
+          <div class="tile pic" style="background:${catOf(e.zone)?.bg}">${mini(e.id)}</div>
           <div class="grow"><h4>${esc(e.name)}</h4><div class="sub">${esc(ZONES[e.zone].name)} · ${esc(EQUIP[e.equip[0]].name)}</div></div>
           <span class="tag" style="${n ? "background:var(--sage);color:#fff" : ""}">${n ? "✓ Añadido" : "＋"}</span></button>`;
       }).join("");
@@ -570,7 +718,8 @@
         <label class="field"><span>Comentario <span class="small muted">(opcional)</span></span>
           <textarea class="input" id="aNote" maxlength="200" placeholder="Ej.: Paseo por el parque con Carmen">${esc(s0?.note || "")}</textarea></label>
         <button class="btn block huge green" id="aSave">${s0 ? "💾 Guardar cambios" : "✅ Guardar en mi diario"}</button>
-        ${s0 ? `<button class="btn danger block" id="aDel">🗑 Borrar esta actividad</button>` : ""}
+        ${s0 ? `<button class="btn soft block" id="aShare">${SHARE} Compartir esta actividad</button>
+          <button class="btn danger block" id="aDel">Borrar esta actividad</button>` : ""}
       </div>`, (sh) => {
       const sync = () => {
         const t = ACT[st.type];
@@ -616,10 +765,10 @@
         if (s0) db.sessions = db.sessions.map((x) => (x.id === s0.id ? rec : x));
         else db.sessions.push(rec);
         save(); closeSheet();
-        toast(s0 ? "💾 Cambios guardados" : `${t.emoji} ¡Apuntado en tu diario!`);
         router();
-        celebrateNew(before);
+        if (s0) { toast("💾 Cambios guardados"); celebrateNew(before); } else afterSave(rec, before);
       });
+      $("#aShare", sh)?.addEventListener("click", () => shareSession(s0));
       $("#aDel", sh)?.addEventListener("click", () => confirmSheet("¿Borrar esta actividad?", "Se quitará de tu diario.", "Sí, borrar", () => {
         db.sessions = db.sessions.filter((x) => x.id !== s0.id); save(); toast("Actividad borrada"); router();
       }, true));
@@ -1030,7 +1179,7 @@
     [/^\/ajustes$/, viewSettings, "", "#/"],
   ];
   let navCount = 0, parentHash = "#/";
-  function router() {
+  function router(opts = {}) {
     const path = decodeURIComponent(location.hash.replace(/^#/, "")) || "/";
     let view = notFound(), tab = "";
     for (const [re, fn, t, parent] of ROUTES) {
@@ -1040,8 +1189,8 @@
     const main = $("#view");
     main.classList.remove("enter");
     main.innerHTML = view.html;
-    void main.offsetWidth;
-    main.classList.add("enter");
+    if (!opts.quiet) { void main.offsetWidth; main.classList.add("enter"); }
+    document.body.dataset.sec = tab || "";
     main.classList.toggle("has-cta", !!view.cta);
     $("#pageTitle").textContent = view.title;
     document.title = view.title ? `${view.title} · Mi Gimnasio` : "Mi Gimnasio en Casa";
@@ -1416,18 +1565,18 @@
   }
   function saveSession() {
     const before = earnedIds();
-    db.sessions.push({
+    const rec = {
       id: uid(), date: localStamp(),
       type: "gym", routineId: P.r.id, name: P.r.name, emoji: P.r.emoji || "🏋️‍♀️",
       areas: areasOfRoutine(P.r), intensity: P.intensity || 2,
       minutes: P.minutes, exercises: Math.max(0, P.done.size - [...P.done].filter((i) => i < P.warm).length), total: P.total - P.warm,
       feeling: P.feeling, note: ($("#pNote")?.value || "").trim(),
-    });
+    };
+    db.sessions.push(rec);
     save();
     stopWorkout();
-    toast("✅ ¡Guardado en tu diario!");
     if (location.hash === "#/" || location.hash === "") router(); else location.hash = "#/";
-    celebrateNew(before);
+    afterSave(rec, before);
   }
   function closePlayerAsk() {
     if (P.finished) { stopWorkout(); return; }
@@ -1508,6 +1657,15 @@
     "h-month": (el) => { histMonth.setMonth(histMonth.getMonth() + +el.dataset.d); showAllLogs = false; router(); },
     "add-manual": () => openActivitySheet(),
     "add-activity": (el) => { if (!P) openActivitySheet(null, el.dataset.type); },
+    "fav": (el) => {
+      const id = el.dataset.id; db.favs = db.favs || [];
+      const on = !db.favs.includes(id);
+      db.favs = on ? [...db.favs, id] : db.favs.filter((x) => x !== id);
+      save(); navigator.vibrate?.(8);
+      toast(on ? "❤️ Guardada en favoritas" : "Quitada de favoritas");
+      const y = window.scrollY; router({ quiet: true }); window.scrollTo(0, y);
+    },
+    "dur": (el) => { durFilter = el.dataset.v; const y = window.scrollY; router({ quiet: true }); window.scrollTo(0, y); },
     "toggle-logs": () => { showAllLogs = !showAllLogs; router(); },
     "badge": (el) => openBadgeSheet(el.dataset.id),
     "edit-session": (el) => { const s = db.sessions.find((x) => x.id === el.dataset.id); if (s) openActivitySheet(s); },

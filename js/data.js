@@ -991,15 +991,16 @@ const PHOTOS = new Set(["squat", "goblet-squat", "sumo-squat", "split-squat", "g
    Un ejercicio puede escribirse como "id" (usa series y cantidad por defecto)
    o como ["id", series, repeticiones-o-segundos].                         */
 const CATEGORIES = [
-  { id: "full",       name: "Cuerpo completo",    emoji: "⭐", color: "#C4553A", desc: "Un poco de todo en cada sesión", rest: 45 },
-  { id: "piernas",    name: "Piernas y glúteos",  emoji: "🦵", color: "#E07A5F", desc: "Subir escaleras y levantarte sin esfuerzo", rest: 45 },
-  { id: "espalda",    name: "Espalda",            emoji: "🧍‍♀️", color: "#3D8B7D", desc: "Mejor postura y menos molestias", rest: 40 },
-  { id: "pecho",      name: "Pecho",              emoji: "💗", color: "#D1495B", desc: "Fuerza para empujar y levantarte del suelo", rest: 45 },
-  { id: "hombros",    name: "Hombros",            emoji: "🙆‍♀️", color: "#8E6CBF", desc: "Alcanzar estanterías y altillos", rest: 40 },
-  { id: "brazos",     name: "Brazos",             emoji: "💪", color: "#E8A33D", desc: "Cargar la compra y los nietos", rest: 40 },
-  { id: "core",       name: "Abdomen",            emoji: "🎯", color: "#2F6FA8", desc: "Una zona media fuerte protege la espalda", rest: 30 },
-  { id: "equilibrio", name: "Equilibrio",         emoji: "⚖️", color: "#5C9E5A", desc: "Prevenir caídas. Ideal 3 días por semana", rest: 30 },
-  { id: "movilidad",  name: "Estiramientos",      emoji: "🧘‍♀️", color: "#4A9BB5", desc: "Suave y relajante, para cualquier día", rest: 10 },
+  // color: acento · bg: fondo pastel
+  { id: "full",       name: "Cuerpo completo",   emoji: "⭐", color: "#7B68D9", bg: "#ECE7FC", desc: "Un poco de todo en cada sesión", rest: 45 },
+  { id: "piernas",    name: "Piernas y glúteos", emoji: "🦵", color: "#D9658E", bg: "#FCE6EE", desc: "Subir escaleras y levantarte sin esfuerzo", rest: 45 },
+  { id: "espalda",    name: "Espalda",           emoji: "🧍‍♀️", color: "#3E8CC9", bg: "#E2F0FB", desc: "Mejor postura y menos molestias", rest: 40 },
+  { id: "pecho",      name: "Pecho",             emoji: "💗", color: "#E07A4F", bg: "#FDEBDF", desc: "Fuerza para empujar y levantarte del suelo", rest: 45 },
+  { id: "hombros",    name: "Hombros",           emoji: "🙆‍♀️", color: "#3E9C77", bg: "#DFF4EA", desc: "Alcanzar estanterías y altillos", rest: 40 },
+  { id: "brazos",     name: "Brazos",            emoji: "💪", color: "#C99620", bg: "#FCF2D6", desc: "Cargar la compra y los nietos", rest: 40 },
+  { id: "core",       name: "Abdomen",           emoji: "🎯", color: "#5B6FD6", bg: "#E6EAFC", desc: "Una zona media fuerte protege la espalda", rest: 30 },
+  { id: "equilibrio", name: "Equilibrio",        emoji: "⚖️", color: "#2E9AA6", bg: "#DDF3F5", desc: "Prevenir caídas. Ideal 3 días por semana", rest: 30 },
+  { id: "movilidad",  name: "Estiramientos",     emoji: "🧘‍♀️", color: "#A55DB5", bg: "#F5E6F7", desc: "Suave y relajante, para cualquier día", rest: 10 },
 ];
 
 const ROUTINES = [
@@ -1016,6 +1017,16 @@ const ROUTINES = [
     items: ["squat", "single-leg", "wall-pushup", "pull-apart", "knee-lift-hold"] },
   { id: "full-6", cat: "full", level: 3, name: "Reto completo", desc: "Para cuando las demás se queden cortas.",
     items: [["split-squat", 3, 8], ["rdl", 3, 10], ["knee-pushup", 3, 8], ["db-row", 3, 10], ["knee-plank", 3, 20]] },
+  { id: "full-7", cat: "full", level: 2, name: "Completa: pesas y esterilla", desc: "Mancuernas de pie y ejercicios en el suelo.",
+    items: ["goblet-squat", "floor-press", "bent-row", "glute-bridge", "dead-bug"] },
+  { id: "full-8", cat: "full", level: 2, name: "Fuerza total", desc: "Todo el cuerpo, combinando mancuernas y silla.",
+    items: ["rdl", "db-shoulder-press", "chair-incline-pushup", "split-squat", "knee-plank"] },
+  { id: "full-9", cat: "full", level: 2, name: "Mezcla de todo", desc: "Mancuernas, banda, esterilla y sin material.",
+    items: ["sumo-squat", "band-row", "floor-fly", "standing-kickback", "bird-dog"] },
+  { id: "full-10", cat: "full", level: 2, name: "Sesión larga de fin de semana", desc: "Para cuando hay tiempo y ganas.",
+    items: [["squat", 3, 12], ["db-row", 3, 10], ["lateral-raise", 3, 10], ["clamshell", 3, 12], ["side-plank-knees", 3, 20]] },
+  { id: "full-11", cat: "full", level: 1, name: "Completa y tranquila", desc: "Sentada y en la esterilla, más larga pero suave.",
+    items: [["sit-stand", 3, 10], ["seated-curl", 3, 12], ["band-pulldown", 3, 12], ["glute-bridge", 3, 12], ["heel-taps", 2, 8]] },
 
   /* ---- Piernas y glúteos ---- */
   { id: "legs-1", cat: "piernas", level: 1, name: "Piernas básicas", desc: "Lo esencial, con una silla.",
@@ -1131,7 +1142,8 @@ const WEEK_PLAN = { 1: "full", 2: "equilibrio", 3: "piernas", 4: "equilibrio", 5
     r.items = r.items.map((it) => {
       if (Array.isArray(it)) return it;
       const ex = byId[it];
-      const sets = ex.zone === "movilidad" ? 1 : 2;
+      // estiramientos: 1 serie · rutinas suaves: 2 series · medias y reto: 3 series
+      const sets = ex.zone === "movilidad" ? (r.cat === "movilidad" ? 2 : 1) : (r.level >= 2 ? 3 : 2);
       return [it, sets, ex.reps || ex.secs];
     });
   });
