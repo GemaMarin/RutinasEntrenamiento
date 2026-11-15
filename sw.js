@@ -1,6 +1,6 @@
 /* Service worker: permite usar la app sin conexión.
    Si cambias archivos, sube el número de versión. */
-const CACHE = "mi-gimnasio-v2";
+const CACHE = "mi-gimnasio-v3";
 const ASSETS = [
   "./", "index.html", "css/styles.css", "js/data.js", "js/app.js",
   "js/anims.js", "js/figure3d.js", "vendor/three.min.js",
@@ -27,7 +27,7 @@ self.addEventListener("fetch", (e) => {
   const isFont = url.hostname === "fonts.googleapis.com" || url.hostname === "fonts.gstatic.com";
   if (url.origin !== location.origin && !isFont) return;
   e.respondWith(
-    fetch(req)
+    fetch(url.origin === location.origin ? new Request(req, { cache: "no-cache" }) : req)
       .then((res) => {
         if (res.ok || res.type === "opaque") {
           const copy = res.clone();
