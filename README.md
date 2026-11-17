@@ -1,4 +1,4 @@
-# 🏋️‍♀️ Mi Gimnasio en Casa
+# 🐒 Mi Gym
 
 Aplicación web sencilla para entrenar en casa, pensada para personas mayores de 60 años que empiezan.
 Solo necesita **mancuernas, banda elástica, esterilla, una silla** o el propio cuerpo.

@@ -1,5 +1,5 @@
 /* =========================================================
-   Mi Gimnasio en Casa — lógica de la aplicación
+   Mi Gym — lógica de la aplicación
    Sin dependencias. Los datos se guardan en el propio
    navegador (localStorage).
    ========================================================= */
@@ -197,7 +197,7 @@
     g.beginPath(); g.arc(W - 120, 140, 220, 0, 7); g.fill();
     g.beginPath(); g.arc(90, H - 120, 180, 0, 7); g.fill(); g.globalAlpha = 1;
     // marca
-    g.fillStyle = "#1D2925"; g.font = F(800, 40); g.textAlign = "left"; g.fillText("Mi Gimnasio en Casa", 80, 110);
+    g.fillStyle = "#1D2925"; g.font = F(800, 40); g.textAlign = "left"; g.fillText("Mi Gym", 80, 110);
     // tarjeta
     g.save(); g.shadowColor = "rgba(20,30,25,.12)"; g.shadowBlur = 50; g.shadowOffsetY = 18;
     roundRect(g, 70, 160, W - 140, H - 300, 56); g.fillStyle = "#FFFFFF"; g.fill(); g.restore();
@@ -1236,7 +1236,7 @@
     document.body.dataset.sec = tab || "";
     main.classList.toggle("has-cta", !!view.cta);
     $("#pageTitle").textContent = view.title;
-    document.title = view.title ? `${view.title} · Mi Gimnasio` : "Mi Gimnasio en Casa";
+    document.title = view.title ? `${view.title} · Mi Gym` : "Mi Gym";
     $("#backBtn").hidden = !view.back;
     $$(".tabbar a").forEach((a) => a.classList.toggle("on", a.dataset.tab === tab));
     view.after?.();
@@ -1752,7 +1752,7 @@
      BIENVENIDA (primera vez)
      ========================================================= */
   function onboarding() {
-    openSheet(`<div class="center"><div style="font-size:3.5rem">👋</div><h2>¡Bienvenida a tu gimnasio en casa!</h2></div>
+    openSheet(`<div class="center"><img src="icons/icon.svg" alt="" style="width:96px;height:96px;border-radius:24px;margin-bottom:8px"><h2>¡Bienvenida a Mi Gym!</h2></div>
       <div class="stack">
         <p>Aquí tienes rutinas sencillas con <strong>mancuernas, bandas, esterilla</strong> o solo con tu cuerpo. La app te guía paso a paso, con temporizador y voz.</p>
         <label class="field"><span>¿Cómo te llamas?</span><input class="input" id="oName" maxlength="30" placeholder="Tu nombre"></label>

@@ -79,11 +79,12 @@
       ],
     },
     "sumo-squat": {
-      cam: 30, props: [{ type: "single" }],
+      cam: 18, pitch: 10, props: [{ type: "single" }], ikFeet: { pole: [0.85, 0.1, 1], from: 0 },
       frames: [
-        { hipL: [0, 22, 32], hipR: [0, 22, 32], shL: [6, -14, 0], shR: [6, -14, 0], elL: 4, elR: 4 },
-        { hipL: [62, 30, 32], hipR: [62, 30, 32], kneeL: 72, kneeR: 72, ankleL: -10, ankleR: -10, spine: [10, 0, 0], shL: [14, -14, 0], shR: [14, -14, 0], elL: 4, elR: 4 },
+        { hipL: [0, 15, 32], hipR: [0, 15, 32], shL: [6, -14, 0], shR: [6, -14, 0], elL: 4, elR: 4 },
+        { hipL: [64, 36, 32], hipR: [64, 36, 32], kneeL: 86, kneeR: 86, spine: [6, 0, 0], shL: [12, -14, 0], shR: [12, -14, 0], elL: 4, elR: 4 },
       ],
+      move: 1.4, hold: 0.5,
     },
     "split-squat": {
       cam: 80, ground: ["heelL", "toeL", "toeR"], anchor: "feet",
@@ -139,10 +140,12 @@
     },
     "clamshell": {
       ...LYING, ground: ["shoulderR", "pelvis", "kneeR"], cam: 5, pitch: 25, props: [MAT(90), { type: "band", links: [["kneeL", "kneeR"]] }],
+      ikFeet: { feet: "L", flat: "keep", y: "keep", from: 0, pole: [0, 1, 0.8] },
       frames: [
-        P(SIDE, { spine: [0, -12, 0], hipR: [50, 0, 0], kneeR: 90, hipL: [50, 0, 0], kneeL: 90, shR: [175, 0, 0], elR: 70, shL: [60, 0, 0], elL: 30, neck: [0, 14, 0] }),
-        P(SIDE, { spine: [0, -12, 0], hipR: [50, 0, 0], kneeR: 90, hipL: [50, 30, -38], kneeL: 90, shR: [175, 0, 0], elR: 70, shL: [60, 0, 0], elL: 30, neck: [0, 14, 0] }),
+        P(SIDE, { spine: [0, -12, 0], hipR: [50, 0, 0], kneeR: 90, hipL: [50, 0, 0], kneeL: 90, shR: [175, 0, 0], elR: 70, shL: [60, 0, 0], elL: 30, neck: [0, 14, 0], wFL: 0 }),
+        P(SIDE, { spine: [0, -12, 0], hipR: [50, 0, 0], kneeR: 90, hipL: [50, 0, 0], kneeL: 90, shR: [175, 0, 0], elR: 70, shL: [60, 0, 0], elL: 30, neck: [0, 14, 0], wFL: 1 }),
       ],
+      move: 1.2, hold: 0.5,
     },
 
     /* ================= ESPALDA ================= */
@@ -200,7 +203,7 @@
       cam: 30, props: [DB],
       frames: [
         { shL: [0, 6, 0], shR: [0, 6, 0], elL: 0, elR: 0 },
-        { shL: [0, 6, 0], shR: [0, 6, 0], elL: 0, elR: 0, shPL: [0.045, -0.01], shPR: [0.045, -0.01] },
+        { shL: [0, 6, 0], shR: [0, 6, 0], elL: 0, elR: 0, shPL: [0.075, -0.015], shPR: [0.075, -0.015], neck: [-4, 0, 0] },
       ],
       move: 0.7, hold: 0.4,
     },
