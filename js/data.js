@@ -1078,7 +1078,7 @@ const PHOTOS = new Set(["squat", "goblet-squat", "sumo-squat", "split-squat", "g
    o como ["id", series, repeticiones-o-segundos].                         */
 /* Fotos en secuencia (ejercicios combinados): texto de cada foto. Por defecto: inicio y final. */
 const PHOTO_SEQ = {
-  "squat-press": ["1 · De pie", "2 · Baja en sentadilla", "3 · Mancuernas a los hombros", "4 · Empuja hacia arriba"],
+  "squat-press": ["1 · Mancuernas en los hombros", "2 · Baja en sentadilla", "3 · Sube y empuja hacia arriba"],
   "rdl-row": ["1 · De pie", "2 · Baja con la espalda recta", "3 · Sube y quédate de pie", "4 · Sube las mancuernas al pecho"],
   "reverse-lunge-curl": ["1 · De pie", "2 · Paso atrás y baja", "3 · Vuelve a juntar los pies", "4 · Curl de bíceps"],
   "plank": ["Cuerpo recto, sobre antebrazos y puntas"],
@@ -1116,10 +1116,10 @@ const ROUTINES = [
     items: ["goblet-squat", "bent-row", "floor-press", "db-shoulder-press", "dead-bug"] },
   { id: "full-3", cat: "full", level: 1, name: "Con banda elástica", desc: "Todo el cuerpo solo con la banda.",
     items: ["band-abduction-seated", "band-row", "band-chest-press", "band-shoulder-press", "band-curl"] },
-  { id: "full-4", cat: "full", level: 1, name: "Todo sentada", desc: "En la silla, sin bajar al suelo.", mov: ["shoulder-circles", "seated-twist", "ankle-circles"],
-    items: ["sit-stand", "band-pulldown", "db-shoulder-press", "seated-curl", "seated-march"] },
-  { id: "full-5", cat: "full", level: 1, name: "Fuerza y equilibrio", desc: "Combina fuerza con ejercicios anti-caídas.",
-    items: ["squat", "single-leg", "wall-pushup", "pull-apart", "knee-lift-hold"] },
+  { id: "full-4", cat: "full", level: 2, name: "De pie con mancuernas", desc: "Piernas, espalda, hombros y brazos sin tumbarse hasta el core.",
+    items: ["goblet-squat", "db-row", "reverse-lunge-curl", "lateral-raise", "hammer-curl"] },
+  { id: "full-5", cat: "full", level: 2, name: "Piernas y tren superior", desc: "Sentadilla, zancada, flexiones en la silla y banda.",
+    items: ["squat", "split-squat", "chair-incline-pushup", "pull-apart", "glute-bridge"] },
   { id: "full-6", cat: "full", level: 3, name: "Reto completo", desc: "Para cuando las demás se queden cortas.",
     items: [["split-squat", 3, 8], ["rdl", 3, 10], ["knee-pushup", 3, 8], ["db-row", 3, 10], ["knee-plank", 3, 20]] },
   { id: "full-7", cat: "full", level: 2, name: "Completa: pesas y esterilla", desc: "Mancuernas de pie y ejercicios en el suelo.",
@@ -1130,8 +1130,8 @@ const ROUTINES = [
     items: ["sumo-squat", "band-row", "floor-fly", "standing-kickback", "bird-dog"] },
   { id: "full-10", cat: "full", level: 2, name: "Sesión larga de fin de semana", desc: "Para cuando hay tiempo y ganas.",
     items: [["squat", 3, 12], ["db-row", 3, 10], ["lateral-raise", 3, 10], ["clamshell", 3, 12], ["side-plank-knees", 3, 20]] },
-  { id: "full-11", cat: "full", level: 1, name: "Completa y tranquila", desc: "Sentada y en la esterilla, más larga pero suave.",
-    items: [["sit-stand", 3, 10], ["seated-curl", 3, 12], ["band-pulldown", 3, 12], ["glute-bridge", 3, 12], ["heel-taps", 2, 8]] },
+  { id: "full-11", cat: "full", level: 1, name: "Completa y suave", desc: "Más larga pero a ritmo tranquilo.",
+    items: [["squat", 3, 12], ["biceps-curl", 3, 12], ["band-pulldown", 3, 12], ["glute-bridge", 3, 12], ["heel-taps", 2, 8]] },
 
   /* ---- Cuerpo completo: más largas y variadas ---- */
   { id: "full-12", cat: "full", level: 2, name: "Todo con mancuernas", desc: "Siete ejercicios con pesas para trabajar todo el cuerpo.",
@@ -1142,8 +1142,8 @@ const ROUTINES = [
     items: [["split-squat", 3, 10], ["hammer-curl", 3, 12], ["goblet-squat", 3, 12], ["overhead-triceps", 3, 12], ["calf-raise", 3, 15], ["side-plank-knees", 3, 20]] },
   { id: "full-15", cat: "full", level: 2, name: "Completa en la esterilla", desc: "Casi todo tumbada o a cuatro patas, con mancuernas.",
     items: [["glute-bridge", 3, 15], ["floor-press", 3, 12], ["side-leg-raise", 3, 12], ["floor-fly", 3, 12], ["bird-dog", 3, 10], ["close-press", 3, 10], ["dead-bug", 3, 8]] },
-  { id: "full-16", cat: "full", level: 2, name: "Fuerza y equilibrio larga", desc: "Fuerza de todo el cuerpo con ejercicios de equilibrio entre medias.",
-    items: [["squat", 3, 15], ["single-leg", 3, 25], ["db-row", 3, 12], ["knee-lift-hold", 3, 8], ["db-shoulder-press", 3, 10], ["tandem-stance", 3, 25], ["rdl", 3, 12]] },
+  { id: "full-16", cat: "full", level: 2, name: "Fuerza larga de pie", desc: "Siete ejercicios de fuerza con mancuernas, casi todo de pie.",
+    items: [["squat", 3, 15], ["reverse-lunge-curl", 3, 10], ["db-row", 3, 12], ["lateral-raise", 3, 12], ["db-shoulder-press", 3, 10], ["sumo-squat", 3, 12], ["rdl", 3, 12]] },
   { id: "full-17", cat: "full", level: 3, name: "Circuito de 4 vueltas", desc: "Cuatro series de cada ejercicio. Para cuando las demás se queden cortas.",
     items: [["goblet-squat", 4, 12], ["knee-pushup", 4, 10], ["bent-row", 4, 12], ["split-squat", 4, 10], ["scaption", 4, 12], ["bird-dog", 4, 10]] },
 
@@ -1274,7 +1274,7 @@ const WARMUP = [["march", 1, 40], ["arm-circles", 1, 30], ["hip-circles", 1, 30]
 /* Plan semanal sugerido (0 = domingo … 6 = sábado): categoría del día.
    La rutina concreta va rotando cada semana.
    Basado en la OMS (2020) para mayores de 65: fuerza ≥ 2 días/semana y equilibrio ≥ 3 días/semana. */
-const WEEK_PLAN = { 1: "full", 2: "equilibrio", 3: "piernas", 4: "equilibrio", 5: "espalda", 6: "movilidad", 0: null };
+const WEEK_PLAN = { 1: "full", 2: "core", 3: "piernas", 4: "hombros", 5: "espalda", 6: "movilidad", 0: null };
 
 /* Normaliza los ejercicios de cada rutina a [id, series, cantidad] */
 /* Las rutinas de cuerpo completo van en tres bloques: movilidad → fuerza → core (2 rondas). */
@@ -1300,7 +1300,7 @@ const CORE_PAIR = { "bird-dog": "heel-taps", "dead-bug": "knee-plank", "knee-pla
       const it = r.items.map((x) => (Array.isArray(x) ? x : [x, r.level >= 2 ? 3 : 2, amt(x)]));
       const core = it.filter(([id]) => byId[id].zone === "core").slice(0, 2).map(([id, , a]) => [id, a]);
       if (core.length === 1) { const c2 = CORE_PAIR[core[0][0]]; if (c2) core.push([c2, amt(c2)]); }
-      if (!core.length) (lv === 1 ? ["wall-plank", "seated-march"] : ["knee-plank", "heel-taps"]).forEach((id) => core.push([id, amt(id)]));
+      if (!core.length) (lv === 1 ? ["knee-plank", "heel-taps"] : ["plank", "leg-raise-hold"]).forEach((id) => core.push([id, amt(id)]));
       b = { mov: r.mov || MOB_DEFAULT[lv], fuerza: it.filter(([id]) => byId[id].zone !== "core"), core };
     }
     const mov = b.mov.map((x) => (Array.isArray(x) ? [x[0], 1, x[1]] : [x, 1, amt(x)]));

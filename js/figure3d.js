@@ -163,6 +163,7 @@
   function applyPose(body, p) {
     const j = body.j, r = body.root;
     r.position.set(p.pos[0], p.pos[1], p.pos[2]);
+    body.posOff = [p.pos[0], p.pos[2]];
     r.rotation.set(p.rot[0] * D, p.rot[1] * D, p.rot[2] * D);
     // columna: [flexión, inclinación lateral, giro]
     j.spine.rotation.set(p.spine[0] * D, p.spine[2] * D, p.spine[1] * D);
@@ -206,7 +207,9 @@
     else if (anchor === "hands") a = wp(m.handL).add(wp(m.handR)).multiplyScalar(0.5);
     else if (anchor === "pelvis") a = wp(m.pelvis);
     if (a) {
-      const at = anim.at || [0, 0];
+      const at0 = anim.at || [0, 0];
+      // con el ancla en la pelvis, pos[x,z] del fotograma desplaza la cadera (círculos de cadera)
+      const at = anchor === "pelvis" && body.posOff ? [at0[0] + body.posOff[0], at0[1] + body.posOff[1]] : at0;
       root.position.x += at[0] - a.x;
       root.position.z += at[1] - a.z;
     }
