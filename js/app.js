@@ -90,9 +90,50 @@
     return `<div class="section card kg-card">
       <div class="switch-row"><div><h3 class="card-title" style="margin:0">⚖️ Tu peso</h3>
         <div class="small muted">${kg === undefined ? "Apunta con cuánto peso lo haces (por mancuerna)." : `Último: ${shortDay(h[h.length - 1].d)} ${kgChange(ex.id)}`}</div></div>
-        ${kgStepper("ex-kg", ex.id, kg ?? 2)}</div>
+        ${kg === undefined ? `<button class="btn ghost small" data-act="ex-kg-add" data-id="${ex.id}">+ Poner peso</button>` : kgStepper("ex-kg", ex.id, kg)}</div>
       ${h.length > 1 ? `<div class="kg-hist">${h.slice(-6).map((x) => `<span><b>${fmtKg(x.kg)}</b>${shortDay(x.d)}</span>`).join("")}</div>` : ""}
     </div>`;
+  }
+
+  const topSeg = (on) => `<div class="seg top-seg">${[["rutinas", "Rutinas"], ["ejercicios", "Ejercicios"], ["pesos", "⚖️ Pesos"]]
+    .map(([k, t]) => `<a href="#/${k}" class="${on === k ? "on" : ""}">${t}</a>`).join("")}</div>`;
+
+  /* Pestaña Pesos: el peso de cada ejercicio con mancuernas */
+  let kgQuery = "";
+  function kgRow(ex) {
+    const kg = lastKg(ex.id), h = kgHist(ex.id);
+    return `<div class="kg-item" data-kgrow="${ex.id}">
+      <a class="tile pic" href="#/ejercicio/${ex.id}" style="background:${catOf(ex.zone)?.bg || "var(--surface-2)"}">${mini(ex.id)}</a>
+      <div class="grow"><h4>${esc(ex.name)}</h4>
+        <div class="sub">${kg === undefined ? "Sin peso apuntado" : `Desde ${shortDay(h[h.length - 1].d)} ${kgChange(ex.id)}`}</div></div>
+      ${kg === undefined
+        ? `<button class="btn ghost small" data-act="kg-add" data-id="${ex.id}">+ Poner peso</button>`
+        : kgStepper("kg-set", ex.id, kg)}
+    </div>`;
+  }
+  function viewWeights() {
+    // primero los ejercicios de las rutinas habituales
+    const fav = new Set(ROUTINES.filter((r) => r.star).flatMap((r) => r.items.map(([id]) => id)));
+    const all = EXERCISES.filter(usesWeight).sort((a, b) => fav.has(b.id) - fav.has(a.id));
+    kgQuery = "";
+    const list = all;
+    const withKg = list.filter((e) => lastKg(e.id) !== undefined), without = list.filter((e) => lastKg(e.id) === undefined);
+    return {
+      title: "Entrenar",
+      html: `
+        ${topSeg("pesos")}
+        <p class="muted" style="margin:4px 2px 12px">Apunta con cuánto peso haces cada ejercicio (por mancuerna). Al hacer una rutina saldrá ese peso; si no hay ninguno, no sale nada.</p>
+        <input class="search" type="search" id="kgSearch" placeholder="Buscar ejercicio…" value="${esc(kgQuery)}" autocomplete="off" />
+        ${withKg.length ? `<div class="section kg-sec"><h3 class="section-title">Tus pesos</h3><div class="kg-items">${withKg.map(kgRow).join("")}</div></div>` : ""}
+        ${without.length ? `<div class="section kg-sec"><h3 class="section-title">${withKg.length ? "Sin peso todavía" : "Ejercicios con mancuernas"}</h3><div class="kg-items">${without.map(kgRow).join("")}</div></div>` : ""}`,
+      after() {
+        $("#kgSearch").addEventListener("input", (e) => {
+          const q = norm(e.target.value);
+          $$("[data-kgrow]").forEach((r) => { r.hidden = !!q && !norm(EX[r.dataset.kgrow].name).includes(q); });
+          $$(".kg-sec").forEach((sec) => { sec.hidden = ![...sec.querySelectorAll("[data-kgrow]")].some((r) => !r.hidden); });
+        });
+      },
+    };
   }
 
   /* ---------------- Datos derivados ---------------- */
@@ -451,7 +492,7 @@
     return {
       title: "Entrenar",
       html: `
-        <div class="seg top-seg"><a href="#/rutinas" class="on">Rutinas</a><a href="#/ejercicios">Ejercicios</a></div>
+        ${topSeg("rutinas")}
         <div class="section" style="margin-top:4px">
           <h3 class="section-title">❤️ Tus favoritas</h3>
           ${favs.length ? `<div class="hscroll">${favs.map(miniRoutineCard).join("")}</div>`
@@ -554,7 +595,7 @@
     return {
       title: "Entrenar",
       html: `
-        <div class="seg top-seg"><a href="#/rutinas" class="">Rutinas</a><a href="#/ejercicios" class="on">Ejercicios</a></div>
+        ${topSeg("ejercicios")}
         <input class="search" type="search" id="exSearch" placeholder="Buscar ejercicio…" value="${esc(exFilter.q)}" autocomplete="off" />
         <div class="chips" style="margin-top:12px">${zoneChips}</div>
         <div class="chips">${eqChips}</div>
@@ -726,6 +767,7 @@
       <h3 class="card-title">⚖️ Tus pesos</h3>
       <p class="small muted card-sub">Con cuánto peso haces cada ejercicio y cuánto has subido.</p>
       <div class="kg-list">${ids.map((id) => `<a class="kg-row" href="#/ejercicio/${id}"><span class="grow">${esc(EX[id].name)}</span>${kgChange(id)}<b>${fmtKg(lastKg(id))}</b></a>`).join("")}</div>
+      <a class="btn ghost small block" style="margin-top:10px" href="#/pesos">⚖️ Cambiar mis pesos</a>
     </div>`;
   }
 
@@ -1295,6 +1337,7 @@
     [/^\/rutina\/([^/]+)$/, viewRoutineDetail, "entrenar", "#/rutinas"],
     [/^\/crear(?:\/([^/]+))?$/, viewBuilder, "entrenar", "#/rutinas"],
     [/^\/ejercicios$/, viewExercises, "entrenar"],
+    [/^\/pesos$/, viewWeights, "entrenar"],
     [/^\/ejercicio\/([^/]+)$/, viewExerciseDetail, "entrenar", "#/ejercicios"],
     [/^\/historial$/, viewHistory, "historial"],
     [/^\/logros$/, viewAchievements, "logros"],
@@ -1655,7 +1698,9 @@
         <div class="p-name">${esc(ex.name)}</div>
         ${setLabel ? `<div class="p-label">${setLabel}</div>` : ""}
         ${dots}
-        ${usesWeight(ex) ? `<div class="p-kg"><span class="small muted">Peso por mancuerna</span>${kgStepper("p-kg", ex.id, P.kg[ex.id] ?? lastKg(ex.id) ?? 2)}</div>` : ""}
+        ${usesWeight(ex) ? ((P.kg[ex.id] ?? lastKg(ex.id)) !== undefined
+          ? `<div class="p-kg"><span class="small muted">Peso por mancuerna</span>${kgStepper("p-kg", ex.id, P.kg[ex.id] ?? lastKg(ex.id))}</div>`
+          : `<button class="link-btn small" data-act="p-kg-add" data-id="${ex.id}">⚖️ Apuntar el peso</button>`) : ""}
         ${main}
         ${ex.tips?.[0] ? `<p class="p-tip">💡 ${esc(ex.tips[0])}</p>` : ""}
         <button class="link-btn" data-act="p-info">¿Cómo se hace? Ver explicación</button>
@@ -1857,6 +1902,13 @@
     "p-kg": (el) => {
       const id = el.dataset.id, kg = kgStep(P.kg[id] ?? lastKg(id) ?? 2, +el.dataset.d);
       P.kg[id] = kg; $$(`[data-kg="${id}"]`).forEach((o) => (o.textContent = fmtKg(kg)));
+    },
+    "p-kg-add": (el) => { P.kg[el.dataset.id] = 2; renderPlayer(); },
+    "ex-kg-add": (el) => { setKg(el.dataset.id, 2); save(); const c = el.closest(".kg-card"); if (c) c.outerHTML = weightCard(EX[el.dataset.id]); },
+    "kg-add": (el) => { setKg(el.dataset.id, 2); save(); const row = el.closest("[data-kgrow]"); if (row) row.outerHTML = kgRow(EX[el.dataset.id]); },
+    "kg-set": (el) => {
+      const id = el.dataset.id; setKg(id, kgStep(lastKg(id), +el.dataset.d)); save();
+      const row = el.closest("[data-kgrow]"); if (row) row.outerHTML = kgRow(EX[id]);
     },
     "ex-kg": (el) => {
       const id = el.dataset.id; setKg(id, kgStep(lastKg(id) ?? 2, +el.dataset.d)); save();
