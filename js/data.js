@@ -993,6 +993,7 @@ const PHOTOS = new Set(["squat", "goblet-squat", "sumo-squat", "split-squat", "g
 const CATEGORIES = [
   // color: acento · bg: fondo pastel
   { id: "full",       name: "Cuerpo completo",   emoji: "⭐", color: "#7B68D9", bg: "#ECE7FC", desc: "Un poco de todo en cada sesión", rest: 45 },
+  { id: "complete",   name: "Sesión completa",   emoji: "🏆", color: "#C2577E", bg: "#FBE4EC", desc: "Entrenamiento entero de 30–40 min: calentamiento, fuerza con y sin pesas, y estiramientos", rest: 45 },
   { id: "piernas",    name: "Piernas y glúteos", emoji: "🦵", color: "#D9658E", bg: "#FCE6EE", desc: "Subir escaleras y levantarte sin esfuerzo", rest: 45 },
   { id: "espalda",    name: "Espalda",           emoji: "🧍‍♀️", color: "#3E8CC9", bg: "#E2F0FB", desc: "Mejor postura y menos molestias", rest: 40 },
   { id: "pecho",      name: "Pecho",             emoji: "💗", color: "#E07A4F", bg: "#FDEBDF", desc: "Fuerza para empujar y levantarte del suelo", rest: 45 },
@@ -1028,6 +1029,24 @@ const ROUTINES = [
   { id: "full-11", cat: "full", level: 1, name: "Completa y tranquila", desc: "Sentada y en la esterilla, más larga pero suave.",
     items: [["sit-stand", 3, 10], ["seated-curl", 3, 12], ["band-pulldown", 3, 12], ["glute-bridge", 3, 12], ["heel-taps", 2, 8]] },
 
+  /* ---- Sesión completa: para cuando es la única rutina del día ----
+     6 ejercicios de fuerza (mancuernas, peso corporal, esterilla, banda) + estiramientos al final */
+  { id: "cmp-1", cat: "complete", level: 2, name: "Pesas y esterilla", desc: "Mancuernas de pie, ejercicios en el suelo y estiramientos.",
+    items: [["goblet-squat", 3, 12], ["bent-row", 3, 12], ["floor-press", 3, 12], ["glute-bridge", 3, 15], ["db-shoulder-press", 3, 10], ["dead-bug", 3, 8],
+      ["child-pose", 1, 40], ["hamstring-stretch", 1, 30]] },
+  { id: "cmp-2", cat: "complete", level: 2, name: "Fuerza de pies a cabeza", desc: "Todo el cuerpo con mancuernas y una silla.",
+    items: [["rdl", 3, 12], ["db-row", 3, 12], ["chair-incline-pushup", 3, 10], ["split-squat", 3, 10], ["lateral-raise", 3, 12], ["knee-plank", 3, 30],
+      ["chest-stretch", 1, 30], ["quad-stretch", 1, 30]] },
+  { id: "cmp-3", cat: "complete", level: 2, name: "Mitad pesas, mitad sin material", desc: "Alterna ejercicios con mancuernas y con tu propio cuerpo.",
+    items: [["squat", 3, 15], ["reverse-fly", 3, 12], ["knee-pushup", 3, 10], ["side-leg-raise", 3, 12], ["hammer-curl", 3, 12], ["bird-dog", 3, 10],
+      ["cat-cow", 1, 10], ["hamstring-stretch", 1, 30]] },
+  { id: "cmp-4", cat: "complete", level: 3, name: "Gran sesión", desc: "La más completa: para los días con muchas ganas.",
+    items: [["sumo-squat", 3, 15], ["bent-row", 3, 12], ["floor-fly", 3, 12], ["standing-kickback", 3, 12], ["overhead-triceps", 3, 12], ["scaption", 3, 12], ["side-plank-knees", 3, 20],
+      ["child-pose", 1, 40], ["quad-stretch", 1, 30]] },
+  { id: "cmp-5", cat: "complete", level: 2, name: "Completa con banda y pesas", desc: "Banda elástica, mancuernas y esterilla.",
+    items: [["band-row", 3, 15], ["goblet-squat", 3, 12], ["band-chest-press", 3, 15], ["clamshell", 3, 15], ["band-shoulder-press", 3, 12], ["crunch", 3, 12],
+      ["chest-stretch", 1, 30], ["hamstring-stretch", 1, 30]] },
+
   /* ---- Piernas y glúteos ---- */
   { id: "legs-1", cat: "piernas", level: 1, name: "Piernas básicas", desc: "Lo esencial, con una silla.",
     items: ["sit-stand", "calf-raise", "hip-abduction-stand", "glute-bridge"] },
@@ -1039,6 +1058,8 @@ const ROUTINES = [
     items: ["sit-stand", "standing-kickback", "hip-abduction-stand", "band-abduction-seated", "calf-raise"] },
   { id: "legs-5", cat: "piernas", level: 3, name: "Reto de piernas", desc: "Tres series y ejercicios más exigentes.",
     items: [["squat", 3, 12], ["split-squat", 3, 8], ["rdl", 3, 10], ["sumo-squat", 3, 10], ["glute-bridge", 3, 15]] },
+  { id: "legs-6", cat: "piernas", level: 2, name: "Piernas completas", desc: "Mancuernas, esterilla y sin material.",
+    items: [["goblet-squat", 3, 12], ["glute-bridge", 3, 15], ["split-squat", 3, 10], ["clamshell", 3, 15], ["calf-raise", 3, 15]] },
 
   /* ---- Espalda ---- */
   { id: "back-1", cat: "espalda", level: 1, name: "Postura recta", desc: "Para dejar de encorvarse.",
@@ -1051,6 +1072,8 @@ const ROUTINES = [
     items: ["cat-cow", "bird-dog", "glute-bridge", "prone-extension", "child-pose"] },
   { id: "back-5", cat: "espalda", level: 2, name: "Espalda completa", desc: "Combina banda y mancuernas.",
     items: ["db-row", "band-pulldown", "reverse-fly", "prone-extension", "pull-apart"] },
+  { id: "back-6", cat: "espalda", level: 3, name: "Reto de espalda", desc: "Tres series, mancuernas y suelo.",
+    items: [["bent-row", 3, 12], ["db-row", 3, 12], ["reverse-fly", 3, 12], ["prone-extension", 3, 10], ["bird-dog", 3, 10]] },
 
   /* ---- Pecho ---- */
   { id: "chest-1", cat: "pecho", level: 1, name: "Pecho para empezar", desc: "De pie, sin bajar al suelo.",
@@ -1063,6 +1086,8 @@ const ROUTINES = [
     items: ["floor-press", "chair-incline-pushup", "overhead-triceps", "triceps-kickback"] },
   { id: "chest-5", cat: "pecho", level: 1, name: "Pecho con banda", desc: "Con la banda elástica, de pie.",
     items: ["band-chest-press", "wall-pushup", "band-external-rotation", "pull-apart"] },
+  { id: "chest-6", cat: "pecho", level: 3, name: "Reto de pecho", desc: "Flexiones y mancuernas, tres series.",
+    items: [["knee-pushup", 3, 10], ["floor-press", 3, 12], ["floor-fly", 3, 12], ["close-press", 3, 10], ["chest-stretch", 1, 30]] },
 
   /* ---- Hombros ---- */
   { id: "sh-1", cat: "hombros", level: 1, name: "Hombros básicos", desc: "Elevaciones suaves con poco peso.",

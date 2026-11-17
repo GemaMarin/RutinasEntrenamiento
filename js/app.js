@@ -141,10 +141,10 @@
   const HEART = `<svg viewBox="0 0 24 24"><path d="M12 20.3s-7.4-4.5-9.1-9.1C1.7 7.8 4 4.6 7.4 4.6c2 0 3.6 1.1 4.6 2.7 1-1.6 2.6-2.7 4.6-2.7 3.4 0 5.7 3.2 4.5 6.6-1.7 4.6-9.1 9.1-9.1 9.1z"/></svg>`;
   const SHARE = `<svg viewBox="0 0 24 24"><path d="M12 3v12M7.5 7.5L12 3l4.5 4.5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>`;
   const isFav = (id) => (db.favs || []).includes(id);
-  const DURS = [["", "Todas"], ["short", "⚡ Hasta 15 min"], ["mid", "⏱ 15–20 min"], ["long", "🔥 Más de 20 min"]];
+  const DURS = [["", "Todas"], ["short", "⚡ Hasta 15 min"], ["mid", "⏱ 15–25 min"], ["long", "🔥 Más de 25 min"]];
   let durFilter = "";
   const routineMins = (r) => estimate(withWarmup(r));
-  const durOf = (r) => { const m = routineMins(r); return m <= 15 ? "short" : m <= 20 ? "mid" : "long"; };
+  const durOf = (r) => { const m = routineMins(r); return m <= 15 ? "short" : m <= 25 ? "mid" : "long"; };
   const durChips = () => `<div class="chips dur-chips">${DURS.map(([k, t]) => `<button class="chip ${durFilter === k ? "on" : ""}" data-act="dur" data-v="${k}">${t}</button>`).join("")}</div>`;
   const catStyle = (c) => (c ? `--c:${c.color};--cbg:${c.bg}` : "--c:var(--primary);--cbg:var(--surface-2)");
   const favBtn = (id, cls = "") => `<button class="fav ${cls} ${isFav(id) ? "on" : ""}" data-act="fav" data-id="${esc(id)}" aria-label="${isFav(id) ? "Quitar de favoritas" : "Guardar en favoritas"}">${HEART}</button>`;
@@ -319,7 +319,7 @@
   /* =========================================================
      VISTAS
      ========================================================= */
-  const CAT_IMG = { full: "squat", piernas: "glute-bridge", espalda: "band-row", pecho: "floor-press", hombros: "lateral-raise",
+  const CAT_IMG = { full: "squat", complete: "goblet-squat", piernas: "glute-bridge", espalda: "band-row", pecho: "floor-press", hombros: "lateral-raise",
     brazos: "biceps-curl", core: "bird-dog", equilibrio: "single-leg", movilidad: "cat-cow" };
   const ICON = {
     play: `<svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor" stroke="none"/></svg>`,
@@ -382,7 +382,7 @@
   function categoryGrid() {
     return `<div class="cat-grid">${CATEGORIES.map((c) => {
       const n = ROUTINES.filter((r) => r.cat === c.id).length;
-      return `<a class="cat" href="#/categoria/${c.id}" style="${catStyle(c)}">
+      return `<a class="cat ${c.id === "complete" ? "wide" : ""}" href="#/categoria/${c.id}" style="${catStyle(c)}">
         <span class="cat-img"><span class="cat-emoji">${c.emoji}</span><img src="${miniSrc(CAT_IMG[c.id])}" alt="" loading="lazy"></span>
         <span class="cat-txt"><strong>${esc(c.name)}</strong><span class="n">${n} rutinas</span></span></a>`;
     }).join("")}</div>`;
@@ -641,7 +641,7 @@
   /* Zonas trabajadas: usan los mismos ids que las categorías (full, piernas, espalda…) */
   function areasOfRoutine(r) {
     if (!r) return [];
-    if (r.cat) return [r.cat];
+    if (r.cat && r.cat !== "complete") return [r.cat];
     const items = r.items.slice(r.warm || 0);
     return [...new Set(items.map(([e]) => EX[e]?.zone).filter(Boolean))];
   }
@@ -1086,7 +1086,6 @@
             <label class="btn ghost small">⬆️ Cargar copia<input type="file" id="sImport" accept="application/json,.json" hidden></label></div>
           </div>
           <div class="callout info"><span class="ic">🩺</span><div><p><strong>Importante:</strong> antes de empezar un programa de ejercicio, consulta con tu médico, sobre todo si tienes problemas de corazón, tensión, articulaciones u osteoporosis. Si sientes mareo, dolor en el pecho o falta de aire, para inmediatamente.</p></div></div>
-          <div class="callout tip"><span class="ic">📚</span><p class="small">Las rutinas siguen las recomendaciones de la OMS para mayores de 65 años: ejercicios de fuerza al menos 2 días por semana, equilibrio al menos 3 días y 150–300 minutos de actividad moderada (como caminar) a la semana.</p></div>
           <button class="btn danger block" data-act="reset">Borrar todos mis datos</button>
           <p class="small muted center">Hecha con cariño 💛</p>
         </div>`,
