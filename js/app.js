@@ -41,7 +41,7 @@
   /* ---------------- Almacenamiento ---------------- */
   const KEY = "mi-gimnasio.v1";
   const DEFAULTS = {
-    settings: { name: "", size: "m", voice: true, sound: true, goal: 3, onboarded: false, theme: "salvia" },
+    settings: { name: "", size: "m", voice: true, sound: true, goal: 3, onboarded: false, theme: "lavanda", themeChosen: false },
     sessions: [], custom: [], videos: {}, favs: [],
   };
   let db = load();
@@ -51,7 +51,9 @@
       if (d && typeof d === "object") {
         // quita de las rutinas propias ejercicios que ya no existan
         (d.custom || []).forEach((c) => { c.items = (c.items || []).filter(([id]) => EX[id]); });
-        return { ...JSON.parse(JSON.stringify(DEFAULTS)), ...d, settings: { ...DEFAULTS.settings, ...(d.settings || {}) } };
+        const out = { ...JSON.parse(JSON.stringify(DEFAULTS)), ...d, settings: { ...DEFAULTS.settings, ...(d.settings || {}) } };
+        if (!out.settings.themeChosen) out.settings.theme = "lavanda"; // nuevo color por defecto si nunca se eligió uno
+        return out;
       }
     } catch (e) { /* datos corruptos o almacenamiento bloqueado */ }
     return JSON.parse(JSON.stringify(DEFAULTS));
@@ -654,8 +656,10 @@
 
   /* ----- Formulario para apuntar / editar una actividad ----- */
   function openActivitySheet(s0 = null, preset = null) {
-    const isWorkout = !!s0?.routineId;
+    const isWorkout = !!(s0?.routineId && s0?.total !== undefined); // hecha con el entrenamiento guiado
+    let minutesTouched = !!s0;
     const st = {
+      routineId: !isWorkout && s0?.routineId && getRoutine(s0.routineId) ? s0.routineId : null,
       type: s0 ? typeOf(s0) : (preset && ACT[preset] ? preset : "gym"),
       minutes: s0?.minutes || 30, feeling: s0?.feeling || 3, intensity: s0?.intensity || 2,
       areas: new Set(s0 ? areasOf(s0) : []), km: s0?.km || 0,
@@ -668,8 +672,14 @@
           <span class="em">${t.emoji}</span>${t.name}</button>`).join("")}</div>
         ${isWorkout ? `<p class="small muted" style="margin:0">Rutina: <strong>${esc(s0.name)}</strong></p>` : ""}
         <label class="field" id="aOther"><span>¿Qué actividad?</span><input class="input" id="aName" maxlength="30" placeholder="Ej.: Baile, Pilates, Tenis…" value="${esc(s0 && typeOf(s0) === "otra" ? s0.name : "")}"></label>
+        <div id="aRoutine" ${isWorkout ? "hidden" : ""}><strong>¿Has hecho una rutina concreta?</strong> <span class="small muted">(opcional)</span>
+          <div id="aRSel" style="margin-top:8px"></div>
+          <div id="aRList" class="rpick" hidden>
+            <input class="search" id="aRSearch" type="search" placeholder="Buscar rutina…" autocomplete="off">
+            <div id="aRItems" class="rpick-items"></div>
+          </div></div>
         <div id="aAreas"><strong>¿Qué has trabajado?</strong> <span class="small muted">(puedes elegir varias)</span>
-          <div class="chips wrap" style="margin-top:8px">${CATEGORIES.map((c) => `<button class="chip ${st.areas.has(c.id) ? "on" : ""}" data-aa="${c.id}">${c.emoji} ${esc(c.name)}</button>`).join("")}</div></div>
+          <div class="chips wrap" style="margin-top:8px">${CATEGORIES.filter((c) => c.id !== "complete").map((c) => `<button class="chip ${st.areas.has(c.id) ? "on" : ""}" data-aa="${c.id}">${c.emoji} ${esc(c.name)}</button>`).join("")}</div></div>
         <div class="card dur">
           <strong>¿Cuánto tiempo?</strong>
           <div class="dur-row"><button class="round" data-am="-5" aria-label="Menos">−</button><output id="aMin">${st.minutes}</output><span class="unit">min</span><button class="round" data-am="5" aria-label="Más">+</button></div>
@@ -693,8 +703,29 @@
         ${s0 ? `<button class="btn soft block" id="aShare">${SHARE} Compartir esta actividad</button>
           <button class="btn danger block" id="aDel">Borrar esta actividad</button>` : ""}
       </div>`, (sh) => {
+      // selector de rutina (opcional)
+      const rpRow = (r) => { const c = r.cat ? catOf(r.cat) : null;
+        return `<button class="rp-item" data-rp="${esc(r.id)}"><span class="rp-th" style="background:${c?.bg || "var(--surface-2)"}">${mini(r.items[0][0])}</span>
+          <span class="grow"><b>${esc(r.name)}</b><small>${c ? `${c.emoji} ${esc(c.name)}` : "Mi rutina"} · ${routineMins(r)} min</small></span></button>`; };
+      const renderSel = () => {
+        const r = st.routineId && getRoutine(st.routineId);
+        $("#aRSel", sh).innerHTML = r
+          ? `<div class="rp-sel">${rpRow(r).replace('class="rp-item"', 'class="rp-item on" data-rp-open="1"')}<button class="mini-btn" data-rp-clear aria-label="Quitar rutina"><svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>`
+          : `<button class="rp-empty" data-rp-open="1">＋ Elegir la rutina que has hecho</button>`;
+      };
+      const renderItems = () => {
+        const q = norm($("#aRSearch", sh).value || "");
+        const ok = (r) => !q || norm(r.name + " " + (r.cat ? catOf(r.cat).name : "")).includes(q);
+        const groups = [["Mis rutinas", db.custom], ["❤️ Favoritas", favRoutines()],
+          ...CATEGORIES.map((c) => [`${c.emoji} ${c.name}`, ROUTINES.filter((r) => r.cat === c.id)])];
+        const html = groups.map(([t, list]) => { const l = list.filter(ok); return l.length ? `<div class="rp-group">${esc(t)}</div>${l.map(rpRow).join("")}` : ""; }).join("");
+        $("#aRItems", sh).innerHTML = html || `<p class="small muted center">No hay rutinas con ese nombre.</p>`;
+      };
+      renderSel();
+      $("#aRSearch", sh).addEventListener("input", renderItems);
       const sync = () => {
         const t = ACT[st.type];
+        $("#aRoutine", sh).hidden = st.type !== "gym" || isWorkout;
         $("#aOther", sh).hidden = st.type !== "otra";
         $("#aAreas", sh).hidden = st.type !== "gym";
         $("#aKm", sh).hidden = !t.km;
@@ -707,6 +738,16 @@
         const at = e.target.closest("[data-at]"), aa = e.target.closest("[data-aa]"), am = e.target.closest("[data-am]"),
           aq = e.target.closest("[data-aq]"), ak = e.target.closest("[data-ak]"), ai = e.target.closest("[data-ai]"),
           mf = e.target.closest("[data-mf]"), ad = e.target.closest("[data-ad]");
+        const rpo = e.target.closest("[data-rp-open]"), rp = e.target.closest("#aRItems [data-rp]"), rpc = e.target.closest("[data-rp-clear]");
+        if (rpo) { const l = $("#aRList", sh); l.hidden = !l.hidden; if (!l.hidden) { renderItems(); $("#aRSearch", sh).focus({ preventScroll: true }); } }
+        if (rpc) { st.routineId = null; renderSel(); }
+        if (rp) {
+          const r = getRoutine(rp.dataset.rp); st.routineId = r.id;
+          if (!st.areas.size) { areasOfRoutine(r).forEach((a) => st.areas.add(a)); $$("[data-aa]", sh).forEach((b) => b.classList.toggle("on", st.areas.has(b.dataset.aa))); }
+          if (!minutesTouched) st.minutes = routineMins(r);
+          $("#aRList", sh).hidden = true; renderSel(); sync();
+        }
+        if (am || aq) minutesTouched = true;
         if (at && !at.disabled) { st.type = at.dataset.at; $$("[data-at]", sh).forEach((b) => b.classList.toggle("on", b === at)); }
         if (aa) { const id = aa.dataset.aa; st.areas.has(id) ? st.areas.delete(id) : st.areas.add(id); aa.classList.toggle("on", st.areas.has(id)); }
         if (am) st.minutes = Math.max(5, Math.min(600, st.minutes + +am.dataset.am));
@@ -734,6 +775,10 @@
         };
         if (t.km && st.km > 0) rec.km = st.km; else delete rec.km;
         if (st.type === "gym") rec.areas = [...st.areas]; else delete rec.areas;
+        if (!isWorkout) {
+          const r = st.type === "gym" && st.routineId && getRoutine(st.routineId);
+          if (r) { rec.routineId = r.id; rec.name = r.name; } else delete rec.routineId;
+        }
         if (s0) db.sessions = db.sessions.map((x) => (x.id === s0.id ? rec : x));
         else db.sessions.push(rec);
         save(); closeSheet();
@@ -843,7 +888,7 @@
     const cnt = {};
     list.filter((s) => typeOf(s) === "gym").forEach((s) => areasOf(s).forEach((a) => (cnt[a] = (cnt[a] || 0) + 1)));
     const anyArea = Object.keys(cnt).length > 0;
-    const body = CATEGORIES.map((c) => `<div class="bchip ${cnt[c.id] ? "on" : ""}" style="--c:${c.color}">
+    const body = CATEGORIES.filter((c) => c.id !== "complete").map((c) => `<div class="bchip ${cnt[c.id] ? "on" : ""}" style="--c:${c.color}">
         <span class="be">${c.emoji}</span><span class="bn">${esc(c.name)}</span>${cnt[c.id] ? `<b>${cnt[c.id]}</b>` : ""}</div>`).join("");
 
     const shown = showAllLogs ? list : list.slice(0, 4);
@@ -881,6 +926,18 @@
           <div class="stack">${doneRows}</div>
         </div>` : ""}
 
+        ${(() => {
+          const rc = {};
+          list.forEach((s) => { const r = s.routineId && getRoutine(s.routineId); if (!r) return; rc[r.id] = rc[r.id] || { r, n: 0, last: s.date }; rc[r.id].n++; if (s.date > rc[r.id].last) rc[r.id].last = s.date; });
+          const rows = Object.values(rc).sort((a, b) => b.n - a.n || b.last.localeCompare(a.last));
+          if (!rows.length) return "";
+          return `<div class="section card">
+            <h3 class="card-title">Tus rutinas del mes</h3>
+            <div class="stack">${rows.slice(0, 6).map(({ r, n, last }) => { const c = r.cat ? catOf(r.cat) : null;
+              return `<a class="my-r" href="#/rutina/${esc(r.id)}"><span class="rp-th" style="background:${c?.bg || "var(--surface-2)"}">${mini(r.items[0][0])}</span>
+                <span class="grow"><b>${esc(r.name)}</b><small>${c ? `${c.emoji} ${esc(c.name)} · ` : ""}última: ${shortDate(new Date(last))}</small></span>
+                <span class="my-n">${n}×</span></a>`; }).join("")}</div></div>`;
+        })()}
         <div class="section card">
           <h3 class="card-title">Semana a semana</h3>
           <p class="small muted card-sub">Minutos de actividad. Toca una barra para ver la semana.</p>
@@ -1099,7 +1156,7 @@
   }
   const THEMES = [["salvia", "Salvia", "#3E7C6A"], ["lavanda", "Lavanda", "#6B5FC7"], ["oceano", "Océano", "#2D7BA6"], ["terracota", "Terracota", "#B9654E"]];
   function applyTheme() {
-    const t = THEMES.some(([k]) => k === db.settings.theme) ? db.settings.theme : "salvia";
+    const t = THEMES.some(([k]) => k === db.settings.theme) ? db.settings.theme : "lavanda";
     document.documentElement.dataset.theme = t;
     const bg = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
     document.querySelector('meta[name="theme-color"]')?.setAttribute("content", bg || "#F5F7F4");
@@ -1644,7 +1701,7 @@
       db.sessions = db.sessions.filter((s) => s.id !== el.dataset.id); save(); router();
     }, true),
     // ajustes
-    "s-theme": (el) => { db.settings.theme = el.dataset.v; save(); applyTheme(); $$("[data-act='s-theme']").forEach((b) => b.classList.toggle("on", b === el)); },
+    "s-theme": (el) => { db.settings.theme = el.dataset.v; db.settings.themeChosen = true; save(); applyTheme(); $$("[data-act='s-theme']").forEach((b) => b.classList.toggle("on", b === el)); },
     "s-size": (el) => { db.settings.size = el.dataset.v; save(); applySize(); $$("[data-act='s-size']").forEach((b) => b.classList.toggle("on", b === el)); },
     "s-goal": (el) => { db.settings.goal = Math.max(1, Math.min(7, db.settings.goal + +el.dataset.d)); save(); $("#sGoal").textContent = db.settings.goal; },
     "export": () => exportBackup(),
