@@ -201,45 +201,43 @@
     // tarjeta
     g.save(); g.shadowColor = "rgba(20,30,25,.12)"; g.shadowBlur = 50; g.shadowOffsetY = 18;
     roundRect(g, 70, 160, W - 140, H - 300, 56); g.fillStyle = "#FFFFFF"; g.fill(); g.restore();
-    // ilustración
-    const cx = W / 2, cy = 430;
-    g.fillStyle = pastel; g.beginPath(); g.arc(cx, cy, 190, 0, 7); g.fill();
-    const img = r ? await loadImg(miniSrc(r.items[0][0])) : null;
-    if (img) {
-      g.save(); g.beginPath(); g.arc(cx, cy, 190, 0, 7); g.clip();
-      g.drawImage(img, cx - 245, cy - 255, 490, 490); g.restore();
-    } else {
-      g.font = F(400, 190); g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(t.emoji, cx, cy + 10); g.textBaseline = "alphabetic";
-    }
-    // fecha y título
-    const d = new Date(s.date);
+    // icono: emoji de la categoría (rutina) o de la actividad
+    const cx = W / 2, cy = 400;
+    g.fillStyle = pastel; g.beginPath(); g.arc(cx, cy, 170, 0, 7); g.fill();
+    g.font = F(400, 170); g.textAlign = "center"; g.textBaseline = "middle"; g.fillStyle = "#1D2925";
+    g.fillText(c ? c.emoji : t.emoji, cx, cy + 10); g.textBaseline = "alphabetic";
+    // categoría (o fecha), título y fecha
+    const d = new Date(s.date), fecha = d.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
     g.textAlign = "center"; g.fillStyle = accent; g.font = F(800, 34);
-    g.fillText(d.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" }).toUpperCase(), cx, 700);
-    g.fillStyle = "#1D2925"; g.font = F(800, 70);
-    const nl = wrapText(g, s.name || t.name, cx, 790, W - 260, 82, 2);
+    g.fillText((c ? c.name : fecha).toUpperCase(), cx, 650);
+    g.fillStyle = "#1D2925"; g.font = F(800, 68);
+    const nl = wrapText(g, s.name || t.name, cx, 740, W - 260, 80, 2);
+    let yy = 740 + (nl - 1) * 80;
+    if (c) { g.fillStyle = "#56645F"; g.font = F(600, 32); g.fillText(fecha.replace(/^./, (ch) => ch.toUpperCase()), cx, yy + 58); yy += 58; }
     // datos
     const f = FEELINGS[(s.feeling || 3) - 1];
     const stats = [["⏱", fmtMin(s.minutes || 0), "de actividad"]];
     if (s.km) stats.push(["👟", `${s.km.toLocaleString("es-ES")} km`, "recorridos"]);
     else if (s.total) stats.push(["💪", `${s.exercises ?? s.total}`, "ejercicios"]);
+    else if (r) stats.push(["💪", `${r.items.length}`, "ejercicios"]);
     else {
       const ws = weekStart(new Date(s.date)), n = db.sessions.filter((x) => { const dx = new Date(x.date); return dx >= ws && x.date <= s.date; }).length;
       stats.push(["📅", `${Math.max(1, n)}ª`, "de la semana"]);
     }
     stats.push([f.e, f.t, "me he sentido"]);
-    const y0 = 790 + nl * 82 + 40, bw = 270, gap = 24, x0 = cx - (bw * 3 + gap * 2) / 2;
+    const y0 = Math.min(yy + 50, 1000), bw = 270, gap = 24, x0 = cx - (bw * 3 + gap * 2) / 2;
     stats.forEach(([e, v, l], i) => {
       const x = x0 + i * (bw + gap);
-      roundRect(g, x, y0, bw, 230, 36); g.fillStyle = pastel; g.fill();
-      g.textAlign = "center"; g.font = F(400, 60); g.fillStyle = "#1D2925"; g.fillText(e, x + bw / 2, y0 + 82);
-      g.font = F(800, 40); g.fillText(v, x + bw / 2, y0 + 150);
-      g.font = F(600, 28); g.fillStyle = "#56645F"; g.fillText(l, x + bw / 2, y0 + 195);
+      roundRect(g, x, y0, bw, 200, 36); g.fillStyle = pastel; g.fill();
+      g.textAlign = "center"; g.font = F(400, 56); g.fillStyle = "#1D2925"; g.fillText(e, x + bw / 2, y0 + 72);
+      g.font = F(800, 38); g.fillText(v, x + bw / 2, y0 + 132);
+      g.font = F(600, 27); g.fillStyle = "#56645F"; g.fillText(l, x + bw / 2, y0 + 172);
     });
     // pie
     const streak = weekStreak();
     g.textAlign = "center"; g.fillStyle = "#56645F"; g.font = F(700, 36);
     const who = db.settings.name ? `${db.settings.name}` : "";
-    const foot = streak >= 2 ? `🔥 ${streak} semanas seguidas activa` : "💚 Cada día un poco mejor";
+    const foot = streak >= 2 ? `🔥 ${streak} semanas seguidas activa` : "💜 Cada día un poco mejor";
     g.fillText(who ? `${who} · ${foot}` : foot, cx, H - 70);
     return new Promise((res) => cv.toBlob(res, "image/png"));
   }
@@ -705,22 +703,39 @@
       </div>`, (sh) => {
       // selector de rutina (opcional)
       const rpRow = (r) => { const c = r.cat ? catOf(r.cat) : null;
-        return `<button class="rp-item" data-rp="${esc(r.id)}"><span class="rp-th" style="background:${c?.bg || "var(--surface-2)"}">${mini(r.items[0][0])}</span>
-          <span class="grow"><b>${esc(r.name)}</b><small>${c ? `${c.emoji} ${esc(c.name)}` : "Mi rutina"} · ${routineMins(r)} min</small></span></button>`; };
+        return `<button class="rp-item" data-rp="${esc(r.id)}"><span class="rp-ic" style="background:${c?.bg || "var(--surface-2)"}">${c ? c.emoji : "⭐"}</span>
+          <span class="grow"><small class="rp-cat" style="color:${c?.color || "var(--primary)"}">${c ? esc(c.name) : "Mi rutina"}</small><b>${esc(r.name)}</b><small>${routineMins(r)} min · ${r.items.length} ejercicios</small></span></button>`; };
       const renderSel = () => {
         const r = st.routineId && getRoutine(st.routineId);
         $("#aRSel", sh).innerHTML = r
           ? `<div class="rp-sel">${rpRow(r).replace('class="rp-item"', 'class="rp-item on" data-rp-open="1"')}<button class="mini-btn" data-rp-clear aria-label="Quitar rutina"><svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>`
           : `<button class="rp-empty" data-rp-open="1">＋ Elegir la rutina que has hecho</button>`;
       };
+      let openGroup = null;
+      const rpGroups = () => [
+        { k: "mine", e: "📝", n: "Mis rutinas", bg: "var(--surface-2)", list: db.custom },
+        { k: "fav", e: "❤️", n: "Favoritas", bg: "#FDE7EF", list: favRoutines() },
+        ...CATEGORIES.map((c) => ({ k: c.id, e: c.emoji, n: c.name, bg: c.bg, list: ROUTINES.filter((r) => r.cat === c.id) })),
+      ].filter((gr) => gr.list.length);
       const renderItems = () => {
         const q = norm($("#aRSearch", sh).value || "");
-        const ok = (r) => !q || norm(r.name + " " + (r.cat ? catOf(r.cat).name : "")).includes(q);
-        const groups = [["Mis rutinas", db.custom], ["❤️ Favoritas", favRoutines()],
-          ...CATEGORIES.map((c) => [`${c.emoji} ${c.name}`, ROUTINES.filter((r) => r.cat === c.id)])];
-        const html = groups.map(([t, list]) => { const l = list.filter(ok); return l.length ? `<div class="rp-group">${esc(t)}</div>${l.map(rpRow).join("")}` : ""; }).join("");
-        $("#aRItems", sh).innerHTML = html || `<p class="small muted center">No hay rutinas con ese nombre.</p>`;
+        if (q) {   // con búsqueda: lista directa
+          const l = allRoutines().filter((r) => norm(r.name + " " + (r.cat ? catOf(r.cat).name : "")).includes(q));
+          $("#aRItems", sh).innerHTML = l.length ? l.map(rpRow).join("") : `<p class="small muted center">No hay rutinas con ese nombre.</p>`;
+          return;
+        }
+        // sin búsqueda: categorías desplegables
+        $("#aRItems", sh).innerHTML = rpGroups().map((gr) => `<button class="rp-acc ${openGroup === gr.k ? "open" : ""}" data-rp-group="${gr.k}">
+            <span class="rp-ic" style="background:${gr.bg}">${gr.e}</span><b class="grow">${esc(gr.n)}</b><span class="rp-n">${gr.list.length}</span>
+            <svg class="rp-chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+          ${openGroup === gr.k ? `<div class="rp-sub">${gr.list.map(rpRow).join("")}</div>` : ""}`).join("");
       };
+      sh.addEventListener("click", (e) => {
+        const gb = e.target.closest("[data-rp-group]"); if (!gb) return;
+        openGroup = openGroup === gb.dataset.rpGroup ? null : gb.dataset.rpGroup;
+        renderItems();
+        if (openGroup) $(`[data-rp-group="${openGroup}"]`, sh)?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      });
       renderSel();
       $("#aRSearch", sh).addEventListener("input", renderItems);
       const sync = () => {
@@ -934,8 +949,8 @@
           return `<div class="section card">
             <h3 class="card-title">Tus rutinas del mes</h3>
             <div class="stack">${rows.slice(0, 6).map(({ r, n, last }) => { const c = r.cat ? catOf(r.cat) : null;
-              return `<a class="my-r" href="#/rutina/${esc(r.id)}"><span class="rp-th" style="background:${c?.bg || "var(--surface-2)"}">${mini(r.items[0][0])}</span>
-                <span class="grow"><b>${esc(r.name)}</b><small>${c ? `${c.emoji} ${esc(c.name)} · ` : ""}última: ${shortDate(new Date(last))}</small></span>
+              return `<a class="my-r" href="#/rutina/${esc(r.id)}"><span class="rp-ic" style="background:${c?.bg || "var(--surface-2)"}">${c ? c.emoji : "⭐"}</span>
+                <span class="grow"><small class="rp-cat" style="color:${c?.color || "var(--primary)"}">${c ? esc(c.name) : "Mi rutina"}</small><b>${esc(r.name)}</b><small>Última vez: ${shortDate(new Date(last))}</small></span>
                 <span class="my-n">${n}×</span></a>`; }).join("")}</div></div>`;
         })()}
         <div class="section card">

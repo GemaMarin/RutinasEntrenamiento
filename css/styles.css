@@ -667,3 +667,16 @@ body[data-sec="logros"] { --primary: #D6922A; --primary-strong: #A86E14; --prima
 .rp-group { font-size: .74rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); margin-top: 6px; }
 .my-r { border: 0; padding: 4px 0; background: none; }
 .my-n { font-weight: 800; color: var(--primary-strong); background: var(--primary-soft); border-radius: 99px; padding: 4px 10px; font-size: .88rem; }
+
+/* Selector de rutina por categorías (sin muñeco) */
+.rp-ic { width: 46px; height: 46px; border-radius: 14px; flex-shrink: 0; display: grid; place-items: center; font-size: 1.45rem; }
+.rp-item .grow, .my-r .grow { display: flex; flex-direction: column; }
+.rp-cat { font-size: .72rem !important; font-weight: 800 !important; text-transform: uppercase; letter-spacing: .05em; }
+.rp-acc { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius-sm); padding: 8px 12px 8px 8px; font: inherit; color: inherit; }
+.rp-acc b { font-size: 1rem; }
+.rp-n { font-size: .8rem; font-weight: 800; color: var(--ink-3); background: var(--surface-2); border-radius: 99px; padding: 2px 9px; }
+.rp-chev { width: 20px; height: 20px; color: var(--ink-3); transition: transform .25s var(--ease); }
+.rp-acc.open { border-color: var(--primary-tint); background: var(--primary-soft); }
+.rp-acc.open .rp-chev { transform: rotate(180deg); }
+.rp-sub { display: grid; gap: 8px; padding: 2px 0 6px 14px; border-left: 2px solid var(--primary-tint); margin-left: 22px; animation: fadeUp .25s var(--ease); }
+.rp-sub .rp-cat { display: none; }
