@@ -1,6 +1,6 @@
 {
-  "name": "Mi Gimnasio en Casa",
-  "short_name": "Mi Gimnasio",
+  "name": "Mi Gym",
+  "short_name": "Mi Gym",
   "description": "Rutinas de ejercicio sencillas para hacer en casa.",
   "lang": "es",
   "start_url": "./",

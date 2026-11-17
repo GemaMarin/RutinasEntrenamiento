@@ -759,13 +759,13 @@ const EXERCISES = [
     yt: "patada de gluteo de pie con silla mayores",
   },
   {
-    id: "clamshell", name: "La almeja con banda", zone: "piernas", equip: ["esterilla", "banda"], level: 1,
+    id: "clamshell", name: "Apertura de rodilla tumbada de lado", zone: "piernas", equip: ["esterilla", "banda"], level: 1,
     type: "reps", reps: 12, side: true,
     summary: "Glúteo lateral, muy bueno para la cadera.",
     steps: [
       "Túmbate de lado con las rodillas dobladas y la banda justo encima de las rodillas.",
       "Pies juntos y cadera quieta.",
-      "Abre la rodilla de arriba como una almeja, sin separar los pies.",
+      "Abre la rodilla de arriba hacia el techo, sin separar los pies.",
       "Cierra despacio. Haz todas y cambia de lado.",
     ],
     tips: ["Sin banda también funciona al principio."],
