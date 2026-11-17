@@ -1122,7 +1122,10 @@
     { id: "racha", name: "Rachas", c1: "#FFB38A", c2: "#E8613C" },
     { id: "tiempo", name: "Tiempo", c1: "#9CC8F5", c2: "#2F7AD0" },
     { id: "var", name: "Variedad", c1: "#A8E0B0", c2: "#3E9B57" },
+    { id: "fuerza", name: "Fuerza", c1: "#C9B8F5", c2: "#7356D1" },
   ];
+  // partes del cuerpo que cuentan para los logros (el equilibrio no cuenta)
+  const AREA_IDS = ["piernas", "espalda", "pecho", "hombros", "brazos", "core", "movilidad"];
   const BADGES = [
     { g: "const", id: "n1", e: "🌱", name: "Primer paso", desc: "Apunta tu primera actividad", v: (m) => m.n, goal: 1, u: ["actividad", "actividades"] },
     { g: "const", id: "n10", e: "🎯", name: "Constante", desc: "10 actividades", v: (m) => m.n, goal: 10, u: ["actividad", "actividades"] },
@@ -1139,11 +1142,24 @@
     { g: "tiempo", id: "t1500", e: "🚀", name: "25 horas", desc: "25 horas en total", v: (m) => m.mins, goal: 1500, u: ["minuto", "minutos"] },
     { g: "var", id: "types3", e: "🎨", name: "Variada", desc: "3 tipos de actividad distintos", v: (m) => m.types, goal: 3, u: ["tipo", "tipos"] },
     { g: "var", id: "areas5", e: "🧭", name: "Exploradora", desc: "Trabaja 5 partes del cuerpo distintas", v: (m) => m.areas, goal: 5, u: ["parte", "partes"] },
-    { g: "var", id: "areas8", e: "🌈", name: "Cuerpo entero", desc: "Trabaja todas las partes del cuerpo", v: (m) => m.areas, goal: 8, u: ["parte", "partes"] },
-    { g: "var", id: "gym20", e: "🏋️‍♀️", name: "Fuerte", desc: "20 sesiones de gimnasio", v: (m) => m.gym, goal: 20, u: ["sesión", "sesiones"] },
-    { g: "var", id: "bal10", e: "⚖️", name: "Equilibrista", desc: "10 sesiones de equilibrio", v: (m) => m.balance, goal: 10, u: ["sesión", "sesiones"] },
+    { g: "var", id: "areas8", e: "🌈", name: "Cuerpo entero", desc: "Trabaja todas las partes del cuerpo", v: (m) => m.areas, goal: AREA_IDS.length, u: ["parte", "partes"] },
     { g: "var", id: "km20", e: "🚶‍♀️", name: "Caminante", desc: "20 km de paseo", v: (m) => m.km, goal: 20, u: ["km", "km"] },
+    { g: "fuerza", id: "gym20", e: "🏋️‍♀️", name: "Fuerte", desc: "20 sesiones de gimnasio", v: (m) => m.gym, goal: 20, u: ["sesión", "sesiones"] },
+    { g: "fuerza", id: "hab10", e: "⭐", name: "La de siempre", desc: "Haz 10 veces tus rutinas habituales", v: (m) => m.hab, goal: 10, u: ["vez", "veces"] },
+    { g: "fuerza", id: "hab25", e: "🌟", name: "Fiel a su rutina", desc: "Haz 25 veces tus rutinas habituales", v: (m) => m.hab, goal: 25, u: ["vez", "veces"] },
+    { g: "fuerza", id: "kgset5", e: "📝", name: "Pesos al día", desc: "Apunta el peso de 5 ejercicios", v: () => kgCount(), goal: 5, u: ["ejercicio", "ejercicios"], when: () => kgCountDate(5) },
+    { g: "fuerza", id: "kg1", e: "⚖️", name: "Más fuerte", desc: "Sube 1 kg en algún ejercicio", v: () => kgBestUp(), goal: 1, u: ["kg", "kg"], when: () => kgUpDate(1) },
+    { g: "fuerza", id: "kg3", e: "🦾", name: "Mucho más fuerte", desc: "Sube 3 kg en algún ejercicio", v: () => kgBestUp(), goal: 3, u: ["kg", "kg"], when: () => kgUpDate(3) },
   ];
+  /* Logros de pesos: salen del registro de pesos, no del diario */
+  const kgIds = () => Object.keys(db.weights || {}).filter((id) => EX[id] && kgHist(id).length);
+  const kgCount = () => kgIds().length;
+  function kgCountDate(n) { const d = kgIds().map((id) => kgHist(id)[0].d).sort(); return d[n - 1] ? d[n - 1] + "T12:00:00" : undefined; }
+  const kgBestUp = () => Math.max(0, ...kgIds().map((id) => { const h = kgHist(id); return Math.max(...h.map((x) => x.kg)) - h[0].kg; }));
+  function kgUpDate(goal) {
+    const d = kgIds().map((id) => { const h = kgHist(id); return h.find((x) => x.kg - h[0].kg >= goal)?.d; }).filter(Boolean).sort();
+    return d[0] ? d[0] + "T12:00:00" : undefined;
+  }
   function bestWeekStreak(S = db.sessions) {
     const weeks = [...new Set(S.map((s) => dateKey(weekStart(new Date(s.date)))))].sort();
     let best = 0, cur = 0, prev = null;
@@ -1151,14 +1167,14 @@
     return best;
   }
   function metrics(S) {
-    const m = { n: S.length, mins: 0, long: 0, km: 0, gym: 0, balance: 0, types: 0, areas: 0 };
+    const m = { n: S.length, mins: 0, long: 0, km: 0, gym: 0, hab: 0, types: 0, areas: 0 };
     const types = new Set(), areas = new Set();
     S.forEach((s) => {
       const t = typeOf(s), ar = areasOf(s);
       m.mins += s.minutes || 0; m.long = Math.max(m.long, s.minutes || 0); types.add(t);
       if (t === "paseo") m.km += s.km || 0;
-      if (t === "gym") { m.gym++; ar.forEach((a) => a !== "full" && areas.add(a)); if (ar.includes("full")) ["piernas", "espalda", "pecho", "hombros", "brazos", "core"].forEach((a) => areas.add(a)); }
-      if (ar.includes("equilibrio")) m.balance++;
+      if (t === "gym") { m.gym++; ar.forEach((a) => AREA_IDS.includes(a) && areas.add(a)); if (ar.includes("full")) ["piernas", "espalda", "pecho", "hombros", "brazos", "core", ...(getRoutine(s.routineId)?.sections ? ["movilidad"] : [])].forEach((a) => areas.add(a)); }
+      if (s.routineId && getRoutine(s.routineId)?.star) m.hab++;
     });
     m.types = types.size; m.areas = areas.size; m.streak = bestWeekStreak(S);
     return m;
@@ -1168,7 +1184,8 @@
     const S = [...db.sessions].sort((a, b) => a.date.localeCompare(b.date));
     const m = metrics(S);
     const when = {};
-    let pending = BADGES.filter((b) => b.v(m) >= b.goal);
+    BADGES.filter((b) => b.when && b.v(m) >= b.goal).forEach((b) => { when[b.id] = b.when(); });
+    let pending = BADGES.filter((b) => !b.when && b.v(m) >= b.goal);
     for (let i = 0; i < S.length && pending.length; i++) {
       const mi = metrics(S.slice(0, i + 1));
       pending = pending.filter((b) => { if (b.v(mi) >= b.goal) { when[b.id] = S[i].date; return false; } return true; });
@@ -1914,19 +1931,29 @@
       P.kg[id] = kg; $$(`[data-kg="${id}"]`).forEach((o) => (o.textContent = fmtKg(kg)));
     },
     "p-kg-add": (el) => { P.kg[el.dataset.id] = 2; renderPlayer(); },
-    "ex-kg-add": (el) => { setKg(el.dataset.id, 2); save(); const c = el.closest(".kg-card"); if (c) c.outerHTML = weightCard(EX[el.dataset.id]); },
+    "ex-kg-add": (el) => {
+      const before = earnedIds();
+      setKg(el.dataset.id, 2); save(); const c = el.closest(".kg-card"); if (c) c.outerHTML = weightCard(EX[el.dataset.id]);
+      celebrateNew(before);
+    },
     "kg-add": (el) => {
+      const before = earnedIds();
       setKg(el.dataset.id, 2); save(); const row = el.closest("[data-kgrow]"); if (row) row.outerHTML = kgRow(EX[el.dataset.id]);
       if ($("#kgMine")) $("#kgMine").innerHTML = kgMine();
       toast("Peso añadido ✓");
+      celebrateNew(before);
     },
     "kg-set": (el) => {
+      const before = earnedIds();
       const id = el.dataset.id; setKg(id, kgStep(lastKg(id), +el.dataset.d)); save();
       $$(`[data-kgrow="${id}"]`).forEach((row) => { row.outerHTML = kgRow(EX[id]); });
+      celebrateNew(before);
     },
     "ex-kg": (el) => {
+      const before = earnedIds();
       const id = el.dataset.id; setKg(id, kgStep(lastKg(id) ?? 2, +el.dataset.d)); save();
       const card = el.closest(".kg-card"); if (card) card.outerHTML = weightCard(EX[id]);
+      celebrateNew(before);
     },
     "p-int": (el) => { P.intensity = +el.dataset.v; $$("[data-act='p-int']").forEach((b) => b.classList.toggle("on", b === el)); },
     "p-feel": (el) => { P.feeling = +el.dataset.v; $$("[data-act='p-feel']").forEach((b) => b.classList.toggle("on", b === el)); },
