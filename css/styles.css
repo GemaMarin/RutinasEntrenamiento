@@ -649,3 +649,6 @@ body[data-sec="logros"] { --primary: #D6922A; --primary-strong: #A86E14; --prima
 .duo-medal { position: absolute; right: 12px; top: 10px; font-size: 3rem; }
 
 .duo-card .duo-medal { position: absolute; right: 12px; top: 8px; font-size: 3.2rem; color: inherit; }
+
+.cat-grid .cat.wide { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 14px; padding: 0 16px 0 0; }
+.cat-grid .cat.wide .cat-img { width: 116px; height: 100px; margin: 0; flex-shrink: 0; }
