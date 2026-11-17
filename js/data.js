@@ -729,6 +729,92 @@ const EXERCISES = [
     caution: "",
     yt: "circulos de tobillo movilidad",
   },
+  /* ---------------- RUTINA HABITUAL (fuerza y core) ---------------- */
+  {
+    id: "squat-press", name: "Sentadilla con press de hombros", zone: "piernas", equip: ["mancuernas"], level: 2,
+    type: "reps", reps: 10,
+    summary: "Sentadilla y, al subir, empujas las mancuernas por encima de la cabeza. Trabaja todo el cuerpo.",
+    steps: [
+      "De pie, pies al ancho de los hombros, una mancuerna en cada mano a la altura de los hombros.",
+      "Baja en sentadilla llevando la cadera atrás, con el pecho alto.",
+      "Sube empujando con los talones.",
+      "Al llegar arriba, empuja las mancuernas hacia el techo y bájalas otra vez a los hombros.",
+    ],
+    tips: ["Haz el movimiento seguido: bajar, subir y empujar.", "Empieza con poco peso."],
+    caution: "No arquees la espalda al subir las mancuernas.",
+    yt: "sentadilla con press de hombros mancuernas",
+  },
+  {
+    id: "rdl-row", name: "Peso muerto con subida de mancuernas", zone: "piernas", equip: ["mancuernas"], level: 2,
+    type: "reps", reps: 10,
+    summary: "Peso muerto y, al subir, llevas las mancuernas hacia el pecho. Piernas, glúteos, espalda y hombros.",
+    steps: [
+      "De pie, una mancuerna en cada mano delante de los muslos, rodillas un poco flexionadas.",
+      "Lleva la cadera atrás y baja las mancuernas pegadas a las piernas hasta las rodillas.",
+      "Sube apretando los glúteos.",
+      "Ya de pie, sube las mancuernas pegadas al cuerpo hasta el pecho, con los codos hacia fuera, y bájalas.",
+    ],
+    tips: ["Espalda recta en todo momento.", "Los codos no suben por encima de los hombros."],
+    caution: "Si notas molestia en los hombros, haz solo el peso muerto.",
+    yt: "peso muerto rumano con remo al menton mancuernas",
+  },
+  {
+    id: "reverse-lunge-curl", name: "Zancada atrás con curl de bíceps", zone: "piernas", equip: ["mancuernas"], level: 2,
+    type: "reps", reps: 10,
+    summary: "Zancada hacia atrás y, al volver, curl de bíceps. Piernas y brazos a la vez.",
+    steps: [
+      "De pie, una mancuerna en cada mano a los lados.",
+      "Da un paso largo hacia atrás y baja doblando las dos rodillas.",
+      "Vuelve empujando con la pierna de delante hasta juntar los pies.",
+      "De pie, haz un curl de bíceps y baja. Alterna la pierna en cada repetición.",
+    ],
+    tips: ["Si te falta equilibrio, hazla junto a una pared o una silla."],
+    caution: "La rodilla de delante no pasa de la punta del pie.",
+    yt: "zancada atras con curl de biceps mancuernas",
+  },
+  {
+    id: "plank", name: "Plancha", zone: "core", equip: ["esterilla"], level: 3,
+    type: "time", secs: 30,
+    summary: "Plancha sobre antebrazos y puntas de los pies. Todo el abdomen.",
+    steps: [
+      "Apoya los antebrazos en la esterilla, codos debajo de los hombros.",
+      "Estira las piernas hacia atrás y apóyate en las puntas de los pies.",
+      "Cuerpo recto de la cabeza a los talones: ni cadera arriba ni abajo.",
+      "Aprieta abdomen y glúteos y respira con normalidad.",
+    ],
+    tips: ["Si cuesta, apoya las rodillas (plancha con rodillas)."],
+    caution: "Para si notas dolor en la zona lumbar.",
+    yt: "plancha abdominal correcta",
+  },
+  {
+    id: "leg-raise-hold", name: "Elevación de piernas mantenida", zone: "core", equip: ["esterilla"], level: 2,
+    type: "time", secs: 30,
+    summary: "Tumbada, levantas las piernas estiradas y las mantienes quietas. Abdomen bajo.",
+    steps: [
+      "Túmbate boca arriba con los brazos a los lados y las palmas hacia abajo.",
+      "Pega la zona lumbar al suelo.",
+      "Levanta las dos piernas estiradas hasta unos 40 cm del suelo.",
+      "Aguanta sin moverlas el tiempo indicado y bájalas despacio.",
+    ],
+    tips: ["Cuanto más altas las piernas, más fácil.", "Si cuesta, dobla un poco las rodillas."],
+    caution: "Si se despega la zona lumbar del suelo, sube más las piernas.",
+    yt: "elevacion de piernas isometrica abdominales",
+  },
+  {
+    id: "plank-shoulder-taps", name: "Plancha tocando el hombro contrario", zone: "core", equip: ["esterilla"], level: 3,
+    type: "reps", reps: 40,
+    summary: "En plancha con los brazos estirados, tocas con una mano el hombro contrario, alternando.",
+    steps: [
+      "Ponte en plancha alta: manos bajo los hombros y brazos estirados, piernas atrás.",
+      "Separa un poco los pies para tener más equilibrio.",
+      "Lleva una mano al hombro contrario y vuelve a apoyarla.",
+      "Alterna las manos sin balancear la cadera. Cuenta cada toque.",
+    ],
+    tips: ["Más fácil: con las rodillas apoyadas."],
+    caution: "",
+    yt: "plancha toque de hombro alternos",
+  },
+
   /* ---------------- EJERCICIOS AÑADIDOS ---------------- */
   {
     id: "sumo-squat", name: "Sentadilla sumo con mancuerna", zone: "piernas", equip: ["mancuernas"], level: 2,
@@ -1005,6 +1091,16 @@ const CATEGORIES = [
 ];
 
 const ROUTINES = [
+  /* ---- Cuerpo completo: las de siempre (movilidad → fuerza → core) ---- */
+  { id: "base-1", cat: "full", level: 2, star: true, name: "La de siempre", desc: "Sentadilla con press, peso muerto, hombros y tríceps. Core con plancha.",
+    blocks: { mov: ["arm-circles", "hip-circles", "cat-cow"], fuerza: ["squat-press", "rdl-row", "lateral-raise", "overhead-triceps"], core: [["plank", 30], ["leg-raise-hold", 30]] } },
+  { id: "base-2", cat: "full", level: 2, star: true, name: "La de siempre con zancada", desc: "Sentadilla con press, peso muerto y zancada con bíceps. Core con toques de hombro.",
+    blocks: { mov: ["march", "shoulder-circles", "hip-circles"], fuerza: ["squat-press", "rdl-row", "reverse-lunge-curl"], core: [["plank-shoulder-taps", 40], ["leg-raise-hold", 30]] } },
+  { id: "base-3", cat: "full", level: 2, star: true, name: "La de siempre sin sentadilla", desc: "Cambia la sentadilla por la zancada con bíceps.",
+    blocks: { mov: ["cat-cow", "arm-circles", "ankle-circles"], fuerza: ["reverse-lunge-curl", "rdl-row", "lateral-raise", "overhead-triceps"], core: [["plank", 30], ["leg-raise-hold", 30]] } },
+  { id: "base-4", cat: "full", level: 2, star: true, name: "La de siempre completa", desc: "Los cinco ejercicios de fuerza seguidos. La más larga.",
+    blocks: { mov: ["march", "arm-circles", "hip-circles", "cat-cow"], fuerza: ["squat-press", "rdl-row", "lateral-raise", "reverse-lunge-curl", "overhead-triceps"], core: [["plank-shoulder-taps", 40], ["leg-raise-hold", 30]] } },
+
   /* ---- Cuerpo completo ---- */
   { id: "full-1", cat: "full", level: 1, name: "Primeros pasos", desc: "Sin material. La mejor para empezar.",
     items: ["sit-stand", "wall-pushup", "glute-bridge", "calf-raise", "bird-dog"] },
@@ -1012,7 +1108,7 @@ const ROUTINES = [
     items: ["goblet-squat", "bent-row", "floor-press", "db-shoulder-press", "dead-bug"] },
   { id: "full-3", cat: "full", level: 1, name: "Con banda elástica", desc: "Todo el cuerpo solo con la banda.",
     items: ["band-abduction-seated", "band-row", "band-chest-press", "band-shoulder-press", "band-curl"] },
-  { id: "full-4", cat: "full", level: 1, name: "Todo sentada", desc: "En la silla, sin bajar al suelo.",
+  { id: "full-4", cat: "full", level: 1, name: "Todo sentada", desc: "En la silla, sin bajar al suelo.", mov: ["shoulder-circles", "seated-twist", "ankle-circles"],
     items: ["sit-stand", "band-pulldown", "db-shoulder-press", "seated-curl", "seated-march"] },
   { id: "full-5", cat: "full", level: 1, name: "Fuerza y equilibrio", desc: "Combina fuerza con ejercicios anti-caídas.",
     items: ["squat", "single-leg", "wall-pushup", "pull-apart", "knee-lift-hold"] },
@@ -1173,8 +1269,43 @@ const WARMUP = [["march", 1, 40], ["arm-circles", 1, 30], ["hip-circles", 1, 30]
 const WEEK_PLAN = { 1: "full", 2: "equilibrio", 3: "piernas", 4: "equilibrio", 5: "espalda", 6: "movilidad", 0: null };
 
 /* Normaliza los ejercicios de cada rutina a [id, series, cantidad] */
+/* Las rutinas de cuerpo completo van en tres bloques: movilidad → fuerza → core (2 rondas). */
+const BLOCKS = {
+  mov: { name: "Movilidad", emoji: "🧘", hint: "Para soltar el cuerpo" },
+  fuerza: { name: "Fuerza", emoji: "💪", hint: "" },
+  core: { name: "Core", emoji: "🎯", hint: "" },
+};
+const CORE_ROUNDS = 2;
+const MOB_DEFAULT = { 1: ["march", "arm-circles", "hip-circles"], 2: ["march", "arm-circles", "hip-circles", "cat-cow"] };
+const CORE_PAIR = { "bird-dog": "heel-taps", "dead-bug": "knee-plank", "knee-plank": "heel-taps", "side-plank-knees": "dead-bug",
+  "seated-march": "seated-rotation", "heel-taps": "knee-plank", "wall-plank": "seated-march", "crunch": "knee-plank", "seated-rotation": "seated-march" };
+
 (function normalize() {
   const byId = Object.fromEntries(EXERCISES.map((e) => [e.id, e]));
+  const amt = (id) => byId[id].reps || byId[id].secs;
+  ROUTINES.forEach((r) => {
+    if (r.cat !== "full") return;
+    let b = r.blocks;
+    if (!b) {
+      // rutinas antiguas: se reparten solas en los tres bloques
+      const lv = r.level >= 2 ? 2 : 1;
+      const it = r.items.map((x) => (Array.isArray(x) ? x : [x, r.level >= 2 ? 3 : 2, amt(x)]));
+      const core = it.filter(([id]) => byId[id].zone === "core").slice(0, 2).map(([id, , a]) => [id, a]);
+      if (core.length === 1) { const c2 = CORE_PAIR[core[0][0]]; if (c2) core.push([c2, amt(c2)]); }
+      if (!core.length) (lv === 1 ? ["wall-plank", "seated-march"] : ["knee-plank", "heel-taps"]).forEach((id) => core.push([id, amt(id)]));
+      b = { mov: r.mov || MOB_DEFAULT[lv], fuerza: it.filter(([id]) => byId[id].zone !== "core"), core };
+    }
+    const mov = b.mov.map((x) => (Array.isArray(x) ? [x[0], 1, x[1]] : [x, 1, amt(x)]));
+    const fz = b.fuerza.map((x) => (Array.isArray(x) ? (x.length === 3 ? x : [x[0], 3, x[1]]) : [x, 3, 10]));
+    const core = b.core.map((x) => (Array.isArray(x) ? [x[0], 1, x[1]] : [x, 1, amt(x)]));
+    r.items = [...mov, ...fz, ...core];
+    r.sections = [
+      { key: "mov", from: 0, to: mov.length },
+      { key: "fuerza", from: mov.length, to: mov.length + fz.length },
+      { key: "core", from: mov.length + fz.length, to: r.items.length, rounds: CORE_ROUNDS },
+    ];
+    delete r.blocks;
+  });
   ROUTINES.forEach((r) => {
     const cat = CATEGORIES.find((c) => c.id === r.cat);
     r.emoji = cat.emoji; r.color = cat.color; r.rest = r.rest || cat.rest;
