@@ -1070,12 +1070,20 @@ const EXERCISES = [
 
 /* Ejercicios con fotos reales (img/fotos/<id>-0.jpg y -1.jpg).
    Fuente: free-exercise-db (dominio público, Unlicense). */
-const PHOTOS = new Set(["squat", "goblet-squat", "sumo-squat", "split-squat", "glute-bridge", "rdl", "bent-row", "db-row", "pull-apart", "prone-extension", "shrug", "floor-press", "db-shoulder-press", "lateral-raise", "front-raise", "scaption", "band-external-rotation", "band-shoulder-press", "band-lateral-raise", "biceps-curl", "hammer-curl", "seated-curl", "overhead-triceps", "triceps-kickback", "dead-bug", "crunch", "child-pose", "cat-cow", "neck-stretch", "arm-circles", "ankle-circles"]);
+const PHOTOS = new Set(["squat", "goblet-squat", "sumo-squat", "split-squat", "glute-bridge", "rdl", "bent-row", "db-row", "pull-apart", "prone-extension", "shrug", "floor-press", "db-shoulder-press", "lateral-raise", "front-raise", "scaption", "band-external-rotation", "band-shoulder-press", "band-lateral-raise", "biceps-curl", "hammer-curl", "seated-curl", "overhead-triceps", "triceps-kickback", "dead-bug", "crunch", "child-pose", "cat-cow", "neck-stretch", "arm-circles", "ankle-circles", "squat-press", "rdl-row", "reverse-lunge-curl", "plank"]);
 
 /* ---------------- CATEGORÍAS Y RUTINAS ----------------
    Cada rutina tiene 4 o 5 ejercicios.
    Un ejercicio puede escribirse como "id" (usa series y cantidad por defecto)
    o como ["id", series, repeticiones-o-segundos].                         */
+/* Fotos en secuencia (ejercicios combinados): texto de cada foto. Por defecto: inicio y final. */
+const PHOTO_SEQ = {
+  "squat-press": ["1 · De pie", "2 · Baja en sentadilla", "3 · Mancuernas a los hombros", "4 · Empuja hacia arriba"],
+  "rdl-row": ["1 · De pie", "2 · Baja con la espalda recta", "3 · Sube y quédate de pie", "4 · Sube las mancuernas al pecho"],
+  "reverse-lunge-curl": ["1 · De pie", "2 · Paso atrás y baja", "3 · Vuelve a juntar los pies", "4 · Curl de bíceps"],
+  "plank": ["Cuerpo recto, sobre antebrazos y puntas"],
+};
+
 const CATEGORIES = [
   // color: acento · bg: fondo pastel
   { id: "full",       name: "Cuerpo completo",   emoji: "⭐", color: "#7B68D9", bg: "#ECE7FC", desc: "Un poco de todo en cada sesión", rest: 45 },

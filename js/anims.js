@@ -325,8 +325,8 @@
     "overhead-triceps": {
       ...SEAT_OPTS, cam: 70, props: [{ type: "chair" }, { type: "single" }],
       frames: [
-        P(SEATED, { shL: [172, -6, 0], shR: [172, -6, 0], elL: 14, elR: 14 }),
-        P(SEATED, { shL: [176, -6, 0], shR: [176, -6, 0], elL: 125, elR: 125 }),
+        P(SEATED, { shL: [170, 0, -40], shR: [170, 0, -40], elL: 18, elR: 18 }),
+        P(SEATED, { shL: [165, 0, -40], shR: [165, 0, -40], elL: 150, elR: 150 }),
       ],
     },
     "triceps-kickback": {
@@ -373,20 +373,20 @@
     },
     /* ----- Ejercicios de la rutina habitual ----- */
     "squat-press": {
-      cam: 35, props: [DB],
+      cam: 35, props: [{ type: "dumbbells", level: "z" }],
       frames: [
-        { shL: [6, 88, 90], shR: [6, 88, 90], elL: 100, elR: 100 },
-        { hipL: [80, 10, 6], hipR: [80, 10, 6], kneeL: 90, kneeR: 90, ankleL: -18, ankleR: -18, spine: [24, 0, 0], shL: [6, 88, 90], shR: [6, 88, 90], elL: 100, elR: 100 },
-        { shL: [6, 166, 90], shR: [6, 166, 90], elL: 10, elR: 10 },
+        { shL: [25, 40, 0], shR: [25, 40, 0], elL: 135, elR: 135 },
+        { hipL: [84, 12, 8], hipR: [84, 12, 8], kneeL: 92, kneeR: 92, ankleL: -20, ankleR: -20, spine: [26, 0, 0], shL: [0, 40, 0], shR: [0, 40, 0], elL: 135, elR: 135 },
+        { shL: [170, -6, 0], shR: [170, -6, 0], elL: 6, elR: 6 },
       ],
       seq: [0, 1, 0, 2], move: 1.0, hold: 0.3,
     },
     "rdl-row": {
-      cam: 40, props: [DB],
+      cam: 40, props: [{ type: "dumbbells", level: "x" }],
       frames: [
-        { shL: [4, 4, 0], shR: [4, 4, 0], elL: 0, elR: 0 },
-        { rot: [62, 0, 0], hipL: [72, 4, 0], hipR: [72, 4, 0], kneeL: 20, kneeR: 20, ankleL: -10, ankleR: -10, shL: [62, 4, 0], shR: [62, 4, 0], elL: 0, elR: 0, neck: [-20, 0, 0] },
-        { shL: [10, 85, -90], shR: [10, 85, -90], elL: 135, elR: 135 },
+        { shL: [6, 4, -90], shR: [6, 4, -90], elL: 0, elR: 0 },
+        { rot: [62, 0, 0], hipL: [72, 4, 0], hipR: [72, 4, 0], kneeL: 20, kneeR: 20, ankleL: -10, ankleR: -10, shL: [62, 4, -90], shR: [62, 4, -90], elL: 0, elR: 0, neck: [-20, 0, 0] },
+        { shL: [25, 92, -80], shR: [25, 92, -80], elL: 150, elR: 150 },
       ],
       seq: [0, 1, 0, 2], move: 1.0, hold: 0.35,
     },

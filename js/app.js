@@ -323,12 +323,25 @@
       ? `<a class="ex-item" href="#/ejercicio/${ex.id}">${inner}${CHEV}</a>`
       : `<div class="ex-item">${inner}</div>`;
   }
+  function photoAnim(ex) {
+    const caps = PHOTO_SEQ[ex.id] || ["Inicio", "Final"];
+    return `<div class="photo-anim" hidden data-n="${caps.length}">${caps.map((c, k) =>
+      `<figure class="${k ? "" : "on"}"><img src="img/fotos/${ex.id}-${k}.jpg" alt="${esc(c)}" loading="lazy"><figcaption>${esc(c)}</figcaption></figure>`).join("")}</div>`;
+  }
+  // las fotos van pasando solas
+  setInterval(() => {
+    document.querySelectorAll(".photo-anim:not([hidden])").forEach((pa) => {
+      const f = [...pa.children]; if (f.length < 2) return;
+      const k = f.findIndex((x) => x.classList.contains("on"));
+      f[k]?.classList.remove("on"); f[(k + 1) % f.length].classList.add("on");
+    });
+  }, 1700);
   function viewerBlock(ex) {
     const hasPhoto = PHOTOS.has(ex.id);
     return `<div class="viewer">
       ${hasPhoto ? `<div class="seg viewer-tabs"><button class="on" data-act="vt" data-v="3d">Muñeco 3D</button><button data-act="vt" data-v="foto">Fotos reales</button></div>` : ""}
       ${figBox(ex.id, "big")}
-      ${hasPhoto ? `<div class="photo-anim" hidden><img src="img/fotos/${ex.id}-0.jpg" alt="Posición inicial"><img class="b" src="img/fotos/${ex.id}-1.jpg" alt="Posición final"></div>` : ""}
+      ${hasPhoto ? photoAnim(ex) : ""}
       <div class="viewer-ctrl"><span class="small muted" data-hint>👆 Arrastra para girar el muñeco</span>
         <button class="btn ghost small" data-act="slow">${figSlow ? "🐇 Velocidad normal" : "🐢 Más despacio"}</button></div>
     </div>`;
@@ -1751,7 +1764,7 @@
       const v = el.closest(".viewer"), foto = el.dataset.v === "foto";
       $$("[data-act='vt']", v).forEach((b) => b.classList.toggle("on", b === el));
       $(".fig3d", v).hidden = foto; $(".photo-anim", v).hidden = !foto;
-      $("[data-hint]", v).textContent = foto ? "📷 Fotos de una persona real (inicio y final)" : "👆 Arrastra para girar el muñeco";
+      $("[data-hint]", v).textContent = foto ? "📷 Fotos de una persona real" : "👆 Arrastra para girar el muñeco";
     },
     "slow": (el) => {
       figSlow = !figSlow;
