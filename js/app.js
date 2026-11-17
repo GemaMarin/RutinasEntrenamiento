@@ -111,26 +111,36 @@
         : kgStepper("kg-set", ex.id, kg)}
     </div>`;
   }
+  /* Solo se ven los ejercicios con peso apuntado; los demás se encuentran con el buscador */
+  function kgMine() {
+    const withKg = EXERCISES.filter((e) => usesWeight(e) && lastKg(e.id) !== undefined);
+    return withKg.length
+      ? `<h3 class="section-title">Tus pesos</h3><div class="kg-items">${withKg.map(kgRow).join("")}</div>`
+      : `<div class="empty kg-empty"><div class="big">⚖️</div><p><strong>Todavía no has añadido ningún peso.</strong><br>Busca un ejercicio arriba y pulsa «+ Poner peso».</p></div>`;
+  }
+  function kgSearchResults(qRaw) {
+    const q = norm(qRaw.trim());
+    if (!q) return "";
+    const res = EXERCISES.filter((e) => usesWeight(e) && norm(e.name).includes(q));
+    return res.length
+      ? `<div class="kg-items">${res.map(kgRow).join("")}</div>`
+      : `<p class="muted" style="margin:6px 2px">No hay ningún ejercicio con mancuernas con ese nombre.</p>`;
+  }
   function viewWeights() {
-    // primero los ejercicios de las rutinas habituales
-    const fav = new Set(ROUTINES.filter((r) => r.star).flatMap((r) => r.items.map(([id]) => id)));
-    const all = EXERCISES.filter(usesWeight).sort((a, b) => fav.has(b.id) - fav.has(a.id));
     kgQuery = "";
-    const list = all;
-    const withKg = list.filter((e) => lastKg(e.id) !== undefined), without = list.filter((e) => lastKg(e.id) === undefined);
     return {
       title: "Entrenar",
       html: `
         ${topSeg("pesos")}
-        <p class="muted" style="margin:4px 2px 12px">Apunta con cuánto peso haces cada ejercicio (por mancuerna). Al hacer una rutina saldrá ese peso; si no hay ninguno, no sale nada.</p>
-        <input class="search" type="search" id="kgSearch" placeholder="Buscar ejercicio…" value="${esc(kgQuery)}" autocomplete="off" />
-        ${withKg.length ? `<div class="section kg-sec"><h3 class="section-title">Tus pesos</h3><div class="kg-items">${withKg.map(kgRow).join("")}</div></div>` : ""}
-        ${without.length ? `<div class="section kg-sec"><h3 class="section-title">${withKg.length ? "Sin peso todavía" : "Ejercicios con mancuernas"}</h3><div class="kg-items">${without.map(kgRow).join("")}</div></div>` : ""}`,
+        <p class="muted" style="margin:4px 2px 12px">Apunta con cuánto peso haces cada ejercicio (por mancuerna). Al hacer una rutina saldrá ese peso.</p>
+        <input class="search" type="search" id="kgSearch" placeholder="Buscar ejercicio…" autocomplete="off" />
+        <div id="kgResults" class="section" hidden></div>
+        <div id="kgMine" class="section">${kgMine()}</div>`,
       after() {
         $("#kgSearch").addEventListener("input", (e) => {
-          const q = norm(e.target.value);
-          $$("[data-kgrow]").forEach((r) => { r.hidden = !!q && !norm(EX[r.dataset.kgrow].name).includes(q); });
-          $$(".kg-sec").forEach((sec) => { sec.hidden = ![...sec.querySelectorAll("[data-kgrow]")].some((r) => !r.hidden); });
+          kgQuery = e.target.value;
+          const box = $("#kgResults"); box.innerHTML = kgSearchResults(kgQuery); box.hidden = !kgQuery.trim();
+          $("#kgMine").hidden = !!kgQuery.trim();
         });
       },
     };
@@ -1905,10 +1915,14 @@
     },
     "p-kg-add": (el) => { P.kg[el.dataset.id] = 2; renderPlayer(); },
     "ex-kg-add": (el) => { setKg(el.dataset.id, 2); save(); const c = el.closest(".kg-card"); if (c) c.outerHTML = weightCard(EX[el.dataset.id]); },
-    "kg-add": (el) => { setKg(el.dataset.id, 2); save(); const row = el.closest("[data-kgrow]"); if (row) row.outerHTML = kgRow(EX[el.dataset.id]); },
+    "kg-add": (el) => {
+      setKg(el.dataset.id, 2); save(); const row = el.closest("[data-kgrow]"); if (row) row.outerHTML = kgRow(EX[el.dataset.id]);
+      if ($("#kgMine")) $("#kgMine").innerHTML = kgMine();
+      toast("Peso añadido ✓");
+    },
     "kg-set": (el) => {
       const id = el.dataset.id; setKg(id, kgStep(lastKg(id), +el.dataset.d)); save();
-      const row = el.closest("[data-kgrow]"); if (row) row.outerHTML = kgRow(EX[id]);
+      $$(`[data-kgrow="${id}"]`).forEach((row) => { row.outerHTML = kgRow(EX[id]); });
     },
     "ex-kg": (el) => {
       const id = el.dataset.id; setKg(id, kgStep(lastKg(id) ?? 2, +el.dataset.d)); save();
