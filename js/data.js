@@ -1029,6 +1029,20 @@ const ROUTINES = [
   { id: "full-11", cat: "full", level: 1, name: "Completa y tranquila", desc: "Sentada y en la esterilla, más larga pero suave.",
     items: [["sit-stand", 3, 10], ["seated-curl", 3, 12], ["band-pulldown", 3, 12], ["glute-bridge", 3, 12], ["heel-taps", 2, 8]] },
 
+  /* ---- Cuerpo completo: más largas y variadas ---- */
+  { id: "full-12", cat: "full", level: 2, name: "Todo con mancuernas", desc: "Siete ejercicios con pesas para trabajar todo el cuerpo.",
+    items: [["goblet-squat", 3, 12], ["rdl", 3, 12], ["bent-row", 3, 12], ["floor-press", 3, 12], ["db-shoulder-press", 3, 10], ["biceps-curl", 3, 12], ["dead-bug", 3, 8]] },
+  { id: "full-13", cat: "full", level: 2, name: "Empujar y tirar", desc: "Alterna ejercicios de empujar y de tirar, con piernas entre medias.",
+    items: [["chair-incline-pushup", 3, 10], ["db-row", 3, 12], ["sumo-squat", 3, 12], ["reverse-fly", 3, 12], ["glute-bridge", 3, 15], ["knee-plank", 3, 30]] },
+  { id: "full-14", cat: "full", level: 2, name: "Piernas y brazos", desc: "Combina un ejercicio de piernas con uno de brazos.",
+    items: [["split-squat", 3, 10], ["hammer-curl", 3, 12], ["goblet-squat", 3, 12], ["overhead-triceps", 3, 12], ["calf-raise", 3, 15], ["side-plank-knees", 3, 20]] },
+  { id: "full-15", cat: "full", level: 2, name: "Completa en la esterilla", desc: "Casi todo tumbada o a cuatro patas, con mancuernas.",
+    items: [["glute-bridge", 3, 15], ["floor-press", 3, 12], ["side-leg-raise", 3, 12], ["floor-fly", 3, 12], ["bird-dog", 3, 10], ["close-press", 3, 10], ["dead-bug", 3, 8]] },
+  { id: "full-16", cat: "full", level: 2, name: "Fuerza y equilibrio larga", desc: "Fuerza de todo el cuerpo con ejercicios de equilibrio entre medias.",
+    items: [["squat", 3, 15], ["single-leg", 3, 25], ["db-row", 3, 12], ["knee-lift-hold", 3, 8], ["db-shoulder-press", 3, 10], ["tandem-stance", 3, 25], ["rdl", 3, 12]] },
+  { id: "full-17", cat: "full", level: 3, name: "Circuito de 4 vueltas", desc: "Cuatro series de cada ejercicio. Para cuando las demás se queden cortas.",
+    items: [["goblet-squat", 4, 12], ["knee-pushup", 4, 10], ["bent-row", 4, 12], ["split-squat", 4, 10], ["scaption", 4, 12], ["bird-dog", 4, 10]] },
+
   /* ---- Sesión completa: para cuando es la única rutina del día ----
      6 ejercicios de fuerza (mancuernas, peso corporal, esterilla, banda) + estiramientos al final */
   { id: "cmp-1", cat: "complete", level: 2, name: "Pesas y esterilla", desc: "Mancuernas de pie, ejercicios en el suelo y estiramientos.",
