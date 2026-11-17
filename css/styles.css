@@ -709,3 +709,18 @@ body[data-sec="logros"] { --primary: #D6922A; --primary-strong: #A86E14; --prima
 .kg-row{display:flex;align-items:center;gap:8px;padding:10px 0;border-top:1px solid var(--line);color:inherit;text-decoration:none}
 .kg-row:first-child{border-top:0}
 .kg-row b{min-width:4.2em;text-align:right}
+
+/* ---------- Pestaña Pesos ---------- */
+.top-seg a{white-space:nowrap}
+.kg-items{display:flex;flex-direction:column;gap:10px}
+.kg-item{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:10px 12px}
+.kg-item .tile{width:54px;height:54px;flex:none;border-radius:14px;overflow:hidden;display:grid;place-items:center}
+.kg-item .tile img{width:100%;height:100%;object-fit:cover}
+.kg-item h4{margin:0;font-size:1rem;line-height:1.25}
+.kg-item .sub{font-size:.85rem;color:var(--muted);margin-top:2px}
+.kg-item .stepper button{width:36px;height:36px}
+.kg-item .kg-step output{min-width:3.6em}
+@media (max-width:380px){.kg-item{flex-wrap:wrap}.kg-item .stepper,.kg-item>.btn{margin-left:auto}}
+.kg-item[hidden],.kg-sec[hidden]{display:none}
+.kg-item{display:grid;grid-template-columns:54px 1fr;column-gap:12px;row-gap:8px}
+.kg-item>.stepper,.kg-item>.btn{grid-column:2;justify-self:start}
