@@ -282,7 +282,9 @@ main { max-width: 680px; margin: 0 auto; padding: 4px 18px 18px; outline: none; 
 .viewer-ctrl { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .photo-anim { position: relative; border-radius: var(--radius); overflow: hidden; background: #111; }
 .photo-anim img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
-.photo-anim img.b { animation: xfade 2.6s ease-in-out infinite; }
+.photo-anim figure { position: absolute; inset: 0; margin: 0; opacity: 0; transition: opacity .6s ease; }
+.photo-anim figure.on { opacity: 1; }
+.photo-anim figcaption { position: absolute; left: 10px; top: 10px; background: rgba(255,255,255,.92); color: #222; font-weight: 800; font-size: .95rem; padding: 5px 12px; border-radius: 999px; }
 @keyframes xfade { 0%, 30% { opacity: 0; } 50%, 80% { opacity: 1; } 100% { opacity: 0; } }
 .video-box { border-radius: var(--radius); overflow: hidden; background: #000; aspect-ratio: 16 / 9; }
 .video-box iframe { width: 100%; height: 100%; border: 0; display: block; }

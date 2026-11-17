@@ -465,7 +465,7 @@
     }
 
     // accesorios
-    const bands = [];
+    const bands = [], levelDbs = [];
     (anim.props || []).forEach((pr) => {
       const t = typeof pr === "string" ? { type: pr } : pr;
       let o = null;
@@ -479,6 +479,8 @@
           db.position.set(0, -0.055, 0);
           if (t.grip === "neutral") db.rotation.y = Math.PI / 2;
           body.j["wr" + s].add(db);
+          // level: la barra de la mancuerna no gira con el antebrazo (misma empuñadura todo el ejercicio)
+          if (t.level) levelDbs.push({ db, yaw: t.level === "z" ? Math.PI / 2 : 0 });
         });
       } else if (t.type === "goblet") {          // una mancuerna vertical pegada al pecho
         const db = buildDumbbell(); db.rotation.z = Math.PI / 2;
@@ -544,6 +546,11 @@
       const s = Math.max(0.6, 1.1 - pel.y * 0.2);
       shadow.position.set(pel.x, 0.002, pel.z); shadow.scale.set(s * 1.1, s * (anim.lying ? 2 : 1.1), 1);
       bands.forEach(({ m, lk }) => placeBand(m, pointFor(lk[0]), pointFor(lk[1])));
+      levelDbs.forEach(({ db, yaw }) => {
+        const qp = db.parent.getWorldQuaternion(new THREE.Quaternion()).invert();
+        const qr = body.root.getWorldQuaternion(new THREE.Quaternion());
+        db.quaternion.copy(qp.multiply(qr).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw)));
+      });
     }
 
     // encuadre: mide la figura en todos los fotogramas
