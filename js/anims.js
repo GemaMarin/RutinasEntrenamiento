@@ -45,6 +45,7 @@
   const SIDE = { rot: [0, 0, 90] };
   const BENT_OVER = { rot: [50, 0, 0], hipL: [62, 6, 0], hipR: [62, 6, 0], kneeL: 22, kneeR: 22, ankleL: -10, ankleR: -10, neck: [-25, 0, 0] };
   const MAT = (rot = 0, len) => ({ type: "mat", rot, len });
+  const PLANK_RX = 84, PLANK_AN = 0, HIGH_RX = 71, HIGH_AN = 0;   // inclinación del cuerpo en las planchas
   // Apoyos: qué partes tocan el suelo en cada postura
   const SUP_GROUND = ["back", "sacrum", "head", "shoulderL", "shoulderR"];   // tumbada boca arriba
   const FEET_FLOOR = { pole: [0.1, 1, 0.3] };                              // pies plantados (rodillas hacia arriba)
@@ -369,6 +370,60 @@
         { rot: [25, 0, 0], shL: [59, 8, -70], shR: [59, 8, -70], elL: 102, elR: 102, ankleL: 1, ankleR: 1, chest: [1, 0, 0] },
       ],
       move: 1.6, hold: 0.2,
+    },
+    /* ----- Ejercicios de la rutina habitual ----- */
+    "squat-press": {
+      cam: 35, props: [DB],
+      frames: [
+        { shL: [6, 88, 90], shR: [6, 88, 90], elL: 100, elR: 100 },
+        { hipL: [80, 10, 6], hipR: [80, 10, 6], kneeL: 90, kneeR: 90, ankleL: -18, ankleR: -18, spine: [24, 0, 0], shL: [6, 88, 90], shR: [6, 88, 90], elL: 100, elR: 100 },
+        { shL: [6, 166, 90], shR: [6, 166, 90], elL: 10, elR: 10 },
+      ],
+      seq: [0, 1, 0, 2], move: 1.0, hold: 0.3,
+    },
+    "rdl-row": {
+      cam: 40, props: [DB],
+      frames: [
+        { shL: [4, 4, 0], shR: [4, 4, 0], elL: 0, elR: 0 },
+        { rot: [62, 0, 0], hipL: [72, 4, 0], hipR: [72, 4, 0], kneeL: 20, kneeR: 20, ankleL: -10, ankleR: -10, shL: [62, 4, 0], shR: [62, 4, 0], elL: 0, elR: 0, neck: [-20, 0, 0] },
+        { shL: [10, 85, -90], shR: [10, 85, -90], elL: 135, elR: 135 },
+      ],
+      seq: [0, 1, 0, 2], move: 1.0, hold: 0.35,
+    },
+    "reverse-lunge-curl": {
+      cam: 75, anchor: "footL", props: [DB],
+      frames: [
+        { shL: [0, 6, 0], shR: [0, 6, 0], elL: 4, elR: 4 },
+        { hipL: [70, 4, 0], hipR: [-15, 4, 0], kneeL: 86, kneeR: 70, ankleL: -14, ankleR: 20, spine: [4, 0, 0], shL: [0, 6, 0], shR: [0, 6, 0], elL: 4, elR: 4 },
+        { shL: [6, 6, 0], shR: [6, 6, 0], elL: 138, elR: 138 },
+      ],
+      seq: [0, 1, 0, 2], move: 1.0, hold: 0.35,
+    },
+    "plank": {
+      ...LYING, anchor: "pelvis", ground: ["elbowL", "elbowR", "toeL", "toeR"], cam: 80, props: [MAT()],
+      frames: [
+        { rot: [PLANK_RX, 0, 0], hipL: [0, 4, 0], hipR: [0, 4, 0], ankleL: PLANK_AN, ankleR: PLANK_AN, shL: [PLANK_RX, 10, 0], shR: [PLANK_RX, 10, 0], elL: 90, elR: 90, neck: [-12, 0, 0] },
+        { rot: [PLANK_RX + 0.6, 0, 0], hipL: [0, 4, 0], hipR: [0, 4, 0], ankleL: PLANK_AN, ankleR: PLANK_AN, shL: [PLANK_RX + 0.6, 10, 0], shR: [PLANK_RX + 0.6, 10, 0], elL: 90, elR: 90, neck: [-12, 0, 0], chest: [1, 0, 0] },
+      ],
+      move: 1.6, hold: 0.2,
+    },
+    "leg-raise-hold": {
+      ...LYING, ground: ["back", "sacrum"], cam: 70, props: [MAT()],
+      frames: [
+        P(SUPINE, ARMS_FLOOR, { hipL: [0, 4, 0], hipR: [0, 4, 0], ankleL: 25, ankleR: 25 }),
+        P(SUPINE, ARMS_FLOOR, { hipL: [40, 4, 0], hipR: [40, 4, 0], ankleL: 25, ankleR: 25 }),
+      ],
+      move: 1.4, hold: 2.2,
+    },
+    "plank-shoulder-taps": {
+      ...LYING, anchor: "pelvis", ground: ["toeL", "toeR", "handL", "handR"], cam: 55, pitch: 16, props: [MAT()],
+      ik: { hands: "both", y: 0.045, pole: [0.3, 0, -1], from: 0 },
+      frames: [
+        { rot: [HIGH_RX, 0, 0], ankleL: HIGH_AN, ankleR: HIGH_AN, hipL: [0, 6, 0], hipR: [0, 6, 0], shL: [HIGH_RX, 8, 0], shR: [HIGH_RX, 8, 0], elL: 0, elR: 0, neck: [-14, 0, 0] },
+        { rot: [HIGH_RX, 0, 0], ankleL: HIGH_AN, ankleR: HIGH_AN, hipL: [0, 6, 0], hipR: [0, 6, 0], shL: [40, -10, 0, -90], shR: [HIGH_RX, 8, 0], elL: 110, elR: 0, neck: [-14, 0, 0], wHL: 0 },
+        { rot: [HIGH_RX, 0, 0], ankleL: HIGH_AN, ankleR: HIGH_AN, hipL: [0, 6, 0], hipR: [0, 6, 0], shL: [HIGH_RX, 8, 0], shR: [40, -10, 0, -90], elL: 0, elR: 110, neck: [-14, 0, 0], wHR: 0 },
+      ],
+      seq: [0, 1, 0, 2], move: 0.6, hold: 0.25,
     },
     "knee-plank": {
       ...LYING, anchor: "knees", ground: ["kneeL", "kneeR", "elbowL", "elbowR"], cam: 80, props: [MAT()],

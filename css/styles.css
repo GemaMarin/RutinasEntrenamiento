@@ -680,3 +680,30 @@ body[data-sec="logros"] { --primary: #D6922A; --primary-strong: #A86E14; --prima
 .rp-acc.open .rp-chev { transform: rotate(180deg); }
 .rp-sub { display: grid; gap: 8px; padding: 2px 0 6px 14px; border-left: 2px solid var(--primary-tint); margin-left: 22px; animation: fadeUp .25s var(--ease); }
 .rp-sub .rp-cat { display: none; }
+
+/* ---------- Rutinas por bloques ---------- */
+.rc-star{display:inline-block;font-size:.78rem;font-weight:800;color:#8a5a00;background:#fff3d6;border-radius:999px;padding:2px 9px;margin:0 0 4px}
+.block-h{display:flex;align-items:center;gap:12px;margin:18px 0 8px}
+.block-h:first-child{margin-top:4px}
+.block-h .bh-e{width:40px;height:40px;border-radius:14px;display:grid;place-items:center;font-size:1.3rem;flex:none}
+.block-h.b-mov .bh-e{background:#e4f4ec}
+.block-h.b-fuerza .bh-e{background:#ece7fb}
+.block-h.b-core .bh-e{background:#fde7ef}
+.block-h strong{font-size:1.05rem}
+.p-block-next{background:var(--surface-2);border-radius:14px;padding:10px 14px;margin:6px 0 2px;font-size:.98rem}
+
+/* ---------- Pesos ---------- */
+.kg-step output{min-width:4.2em}
+.kg-up,.kg-down{white-space:nowrap}
+.kg-card .kg-up,.kg-card .kg-down{display:block;margin:2px 0 0}
+.p-kg .stepper button{background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.kg-up{color:#1a8a5a;font-weight:800;font-size:.85rem;margin-left:6px}
+.kg-down{color:#b5523b;font-weight:800;font-size:.85rem;margin-left:6px}
+.kg-hist{display:flex;gap:8px;overflow-x:auto;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.kg-hist span{display:flex;flex-direction:column;align-items:center;min-width:64px;background:var(--surface-2);border-radius:12px;padding:6px 8px;font-size:.8rem;color:var(--muted)}
+.kg-hist b{color:var(--ink);font-size:.95rem}
+.p-kg{display:flex;align-items:center;justify-content:center;gap:12px;background:var(--surface-2);border-radius:16px;padding:6px 8px 6px 14px;margin:4px 0}
+.kg-list{display:flex;flex-direction:column}
+.kg-row{display:flex;align-items:center;gap:8px;padding:10px 0;border-top:1px solid var(--line);color:inherit;text-decoration:none}
+.kg-row:first-child{border-top:0}
+.kg-row b{min-width:4.2em;text-align:right}

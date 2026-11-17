@@ -42,7 +42,7 @@
   const KEY = "mi-gimnasio.v1";
   const DEFAULTS = {
     settings: { name: "", size: "m", voice: true, sound: true, goal: 3, onboarded: false, theme: "lavanda", themeChosen: false },
-    sessions: [], custom: [], videos: {}, favs: [],
+    sessions: [], custom: [], videos: {}, favs: [], weights: {},
   };
   let db = load();
   function load() {
@@ -63,6 +63,38 @@
     catch (e) { toast("⚠️ No se ha podido guardar en este navegador"); }
   }
 
+  /* ---------------- Pesos por ejercicio ---------------- */
+  const usesWeight = (ex) => !!ex && ex.equip.includes("mancuernas");
+  const kgHist = (id) => (db.weights[id] || []);
+  const lastKg = (id) => kgHist(id).slice(-1)[0]?.kg;
+  const fmtKg = (kg) => `${String(kg).replace(".", ",")} kg`;
+  const shortDay = (d) => parseKey(d).toLocaleDateString("es-ES", { day: "numeric", month: "short" });
+  function setKg(id, kg) {
+    const d = localStamp().slice(0, 10);
+    const h = (db.weights[id] = kgHist(id).slice());
+    if (h.length && h[h.length - 1].d === d) h[h.length - 1].kg = kg; else h.push({ d, kg });
+    // si hoy vuelve al peso del día anterior, no hace falta guardarlo dos veces
+    if (h.length > 1 && h[h.length - 2].kg === kg && h[h.length - 1].d === d) h.pop();
+  }
+  const kgStep = (kg, d) => Math.max(0, Math.min(40, Math.round((kg + d) * 2) / 2));
+  function kgStepper(act, id, kg) {
+    return `<span class="stepper kg-step"><button data-act="${act}" data-id="${id}" data-d="-0.5" aria-label="Menos peso">−</button><output data-kg="${id}">${fmtKg(kg)}</output><button data-act="${act}" data-id="${id}" data-d="0.5" aria-label="Más peso">+</button></span>`;
+  }
+  function kgChange(id) {
+    const h = kgHist(id); if (h.length < 2) return "";
+    const diff = Math.round((h[h.length - 1].kg - h[0].kg) * 10) / 10;
+    return diff > 0 ? `<span class="kg-up">▲ ${fmtKg(diff)}</span>` : diff < 0 ? `<span class="kg-down">▼ ${fmtKg(-diff)}</span>` : "";
+  }
+  function weightCard(ex) {
+    const h = kgHist(ex.id), kg = lastKg(ex.id);
+    return `<div class="section card kg-card">
+      <div class="switch-row"><div><h3 class="card-title" style="margin:0">⚖️ Tu peso</h3>
+        <div class="small muted">${kg === undefined ? "Apunta con cuánto peso lo haces (por mancuerna)." : `Último: ${shortDay(h[h.length - 1].d)} ${kgChange(ex.id)}`}</div></div>
+        ${kgStepper("ex-kg", ex.id, kg ?? 2)}</div>
+      ${h.length > 1 ? `<div class="kg-hist">${h.slice(-6).map((x) => `<span><b>${fmtKg(x.kg)}</b>${shortDay(x.d)}</span>`).join("")}</div>` : ""}
+    </div>`;
+  }
+
   /* ---------------- Datos derivados ---------------- */
   const allRoutines = () => [...ROUTINES, ...db.custom];
   const getRoutine = (id) => allRoutines().find((r) => r.id === id);
@@ -73,10 +105,13 @@
     return short ? `${amt} rep.${side}` : `${amt} repeticiones${side}`;
   }
   function restFor(r, ex) { return ex.zone === "movilidad" ? 10 : r.rest || 40; }
+  const secOf = (r, i) => r.sections?.find((x) => i >= x.from && i < x.to);
+  const roundsOf = (r, i) => secOf(r, i)?.rounds || 1;
   function estimate(r) {
     let s = 0;
-    r.items.forEach(([id, sets, amt]) => {
+    r.items.forEach(([id, sets0, amt], i) => {
       const ex = EX[id]; if (!ex) return;
+      const sets = sets0 * roundsOf(r, i);
       const per = ex.type === "time" ? amt : amt * 4;
       s += sets * per * (ex.side ? 2 : 1) + sets * restFor(r, ex);
     });
@@ -135,7 +170,7 @@
   const mini = (id, cls = "mini") => `<img class="${cls}" src="${miniSrc(id)}" alt="" loading="lazy" decoding="async">`;
   const figBox = (id, cls = "") => `<div class="fig3d ${cls}" data-ex="${esc(id)}">${mini(id, "fig-ph")}</div>`;
   const catOf = (id) => CATEGORIES.find((c) => c.id === id);
-  const withWarmup = (r) => (r.cat && r.cat !== "movilidad" && db.settings.warmup !== false
+  const withWarmup = (r) => (r.sections ? r : r.cat && r.cat !== "movilidad" && db.settings.warmup !== false
     ? { ...r, items: [...WARMUP, ...r.items], warm: WARMUP.length } : r);
 
   /* ---------------- Plantillas comunes ---------------- */
@@ -151,15 +186,21 @@
   const catStyle = (c) => (c ? `--c:${c.color};--cbg:${c.bg}` : "--c:var(--primary);--cbg:var(--surface-2)");
   const favBtn = (id, cls = "") => `<button class="fav ${cls} ${isFav(id) ? "on" : ""}" data-act="fav" data-id="${esc(id)}" aria-label="${isFav(id) ? "Quitar de favoritas" : "Guardar en favoritas"}">${HEART}</button>`;
 
+  /* Ejercicios «principales»: en las rutinas por bloques, los de fuerza */
+  function mainItems(r) {
+    const f = r.sections?.find((x) => x.key === "fuerza");
+    return f ? r.items.slice(f.from, f.to) : r.items;
+  }
   function routineCard(r, { showCat = true } = {}) {
     const c = r.cat ? catOf(r.cat) : null;
-    const thumbs = r.items.slice(0, 5).map(([id]) => `<span class="th">${mini(id)}</span>`).join("");
+    const thumbs = mainItems(r).slice(0, 5).map(([id]) => `<span class="th">${mini(id)}</span>`).join("");
     return `<a class="routine-card" href="#/rutina/${esc(r.id)}" style="${catStyle(c)}">
       <div class="rc-top"><div class="grow">
         ${showCat && c ? `<span class="rc-cat">${c.emoji} ${esc(c.name)}</span>` : ""}
+        ${r.star ? `<span class="rc-star">⭐ Tu rutina habitual</span>` : ""}
         <h3>${esc(r.name)}</h3>
         ${r.desc ? `<p>${esc(r.desc)}</p>` : ""}
-        <div class="meta"><span>⏱ ${routineMins(r)} min</span><span>${r.items.length} ejercicios</span><span>${levelDots(routineLevel(r))}</span></div>
+        <div class="meta"><span>⏱ ${routineMins(r)} min</span><span>${r.sections ? "🧘 · 💪 · 🎯" : `${r.items.length} ejercicios`}</span><span>${levelDots(routineLevel(r))}</span></div>
       </div>${favBtn(r.id)}</div>
       <div class="thumbs">${thumbs}</div></a>`;
   }
@@ -167,7 +208,7 @@
     const c = r.cat ? catOf(r.cat) : null;
     return `<a class="mini-routine" href="#/rutina/${esc(r.id)}" style="${catStyle(c)}">
       <span class="eyebrow-s">${c ? `${c.emoji} ${esc(c.name)}` : "Mi rutina"} · ${routineMins(r)} min</span><h4>${esc(r.name)}</h4>
-      <div class="thumbs">${r.items.slice(0, 4).map(([id]) => `<span class="th">${mini(id)}</span>`).join("")}</div></a>`;
+      <div class="thumbs">${mainItems(r).slice(0, 4).map(([id]) => `<span class="th">${mini(id)}</span>`).join("")}</div></a>`;
   }
   const favRoutines = () => (db.favs || []).map(getRoutine).filter(Boolean);
 
@@ -442,23 +483,34 @@
     const r = getRoutine(id);
     if (!r) return notFound();
     const eq = routineEquip(r);
-    const list = r.items.map(([eid, sets, amt], i) => {
+    const row = ([eid, sets, amt], n) => {
       const ex = EX[eid]; if (!ex) return "";
-      return exItem(ex, { num: i + 1, right: `${sets > 1 ? `${sets} series × ` : ""}${amountText(ex, amt, true)}` });
-    }).join("");
+      return exItem(ex, { num: n, right: `${sets > 1 ? `${sets} series × ` : ""}${amountText(ex, amt, true)}${usesWeight(ex) && lastKg(eid) !== undefined ? ` · ${fmtKg(lastKg(eid))}` : ""}` });
+    };
+    const list = r.sections
+      ? r.sections.map((sec) => {
+          const B = BLOCKS[sec.key], its = r.items.slice(sec.from, sec.to);
+          const sub = sec.key === "mov" ? "Una vez cada uno, sin prisa"
+            : sec.key === "core" ? `${sec.rounds} rondas: uno detrás de otro y vuelta a empezar`
+            : `${its[0]?.[1] || 3} series de cada ejercicio`;
+          return `<div class="block-h b-${sec.key}"><span class="bh-e">${B.emoji}</span><div><strong>${B.name}</strong><div class="small muted">${sub}</div></div></div>
+            <div class="ex-list">${its.map((it, k) => row(it, k + 1)).join("")}</div>`;
+        }).join("")
+      : `<div class="ex-list">${r.items.map((it, i) => row(it, i + 1)).join("")}</div>`;
     const isCustom = db.custom.some((c) => c.id === r.id);
     const c = r.cat ? catOf(r.cat) : null;
-    const canWarm = r.cat && r.cat !== "movilidad";
+    const canWarm = r.cat && r.cat !== "movilidad" && !r.sections;
     return {
       title: r.name, back: true, cta: true, parent: c ? `#/categoria/${c.id}` : "#/rutinas",
       html: `
-        <div class="detail-head"><div class="tile lg" style="background:${c?.bg || "var(--surface-2)"}">${r.items[0] ? mini(r.items[0][0]) : ""}</div>
+        <div class="detail-head"><div class="tile lg" style="background:${c?.bg || "var(--surface-2)"}">${mainItems(r)[0] ? mini(mainItems(r)[0][0]) : ""}</div>
           <div class="grow">${c ? `<div class="eyebrow-s">${c.emoji} ${esc(c.name)}</div>` : ""}<h2>${esc(r.name)}</h2>${r.desc ? `<p class="muted" style="margin:4px 0 0">${esc(r.desc)}</p>` : ""}</div>
           ${favBtn(r.id, "big")}</div>
         <div class="tags">
           <span class="tag">⏱ ${estimate(withWarmup(r))} min</span>
           <span class="tag">${r.items.length} ejercicios</span>
           <span class="tag">${levelDots(routineLevel(r))}</span>
+          ${r.star ? `<span class="tag">⭐ Habitual</span>` : ""}
         </div>
         <div class="section card">
           <strong>Necesitas:</strong>
@@ -467,7 +519,7 @@
           ${canWarm ? `<div class="switch-row" style="margin-top:8px;border-top:1px solid var(--line);padding-top:12px"><div><strong>Calentamiento</strong><div class="small muted">2 minutos suaves antes de empezar</div></div>
             <label class="switch"><input type="checkbox" id="warmSw" ${db.settings.warmup !== false ? "checked" : ""}><span></span></label></div>` : ""}
         </div>
-        <div class="section"><h3 class="section-title">Ejercicios</h3><div class="ex-list">${list}</div></div>
+        <div class="section"><h3 class="section-title">Ejercicios</h3>${list}</div>
         <div class="section row" style="flex-wrap:wrap">
           ${isCustom
             ? `<a class="btn ghost small" href="#/crear/${esc(r.id)}">✏️ Editar</a><button class="btn danger small" data-act="del-routine" data-id="${esc(r.id)}">🗑 Borrar</button>`
@@ -527,6 +579,7 @@
           ${ex.equip.map((e) => `<span class="tag">${EQUIP[e].emoji} ${EQUIP[e].name}</span>`).join("")}</div>
         ${viewerBlock(ex)}
         <p class="lead" style="margin-top:14px">${esc(ex.summary)} <span class="tag">🎯 ${amountText(ex, ex.reps || ex.secs)}</span></p>
+        ${usesWeight(ex) ? weightCard(ex) : ""}
         <div class="section"><h3 class="section-title">Cómo se hace</h3><div class="stack">${howToHTML(ex)}</div></div>
         <div class="section"><h3 class="section-title">Vídeo</h3>${videoBlock(ex)}</div>
         ${usedIn.length ? `<div class="section"><h3 class="section-title">Aparece en estas rutinas</h3><div class="routine-list">${usedIn.slice(0, 6).map((r) => routineCard(r)).join("")}</div></div>` : ""}
@@ -650,6 +703,17 @@
     if (!s.routineId) return [];
     if (s.routineId.startsWith("ex-")) { const ex = EX[s.routineId.slice(3)]; return ex ? [ex.zone] : []; }
     return areasOfRoutine(getRoutine(s.routineId));
+  }
+
+  function weightsSummary() {
+    const ids = Object.keys(db.weights || {}).filter((id) => EX[id] && kgHist(id).length);
+    if (!ids.length) return "";
+    ids.sort((a, b) => (kgHist(b).slice(-1)[0].d > kgHist(a).slice(-1)[0].d ? 1 : -1));
+    return `<div class="section card">
+      <h3 class="card-title">⚖️ Tus pesos</h3>
+      <p class="small muted card-sub">Con cuánto peso haces cada ejercicio y cuánto has subido.</p>
+      <div class="kg-list">${ids.map((id) => `<a class="kg-row" href="#/ejercicio/${id}"><span class="grow">${esc(EX[id].name)}</span>${kgChange(id)}<b>${fmtKg(lastKg(id))}</b></a>`).join("")}</div>
+    </div>`;
   }
 
   /* ----- Formulario para apuntar / editar una actividad ----- */
@@ -965,6 +1029,8 @@
           <p class="small muted card-sub">${anyArea ? "Lo que has trabajado en el gimnasio este mes." : "Cuando apuntes gimnasio, marca qué has trabajado y aparecerá aquí."}</p>
           <div class="bchips">${body}</div>
         </div>
+
+        ${weightsSummary()}
 
         <div class="section">
           <h3 class="section-title">Tus actividades</h3>
@@ -1360,6 +1426,7 @@
   const RING_C = 2 * Math.PI * 100;
 
   function buildSteps(r) {
+    if (r.sections) return buildBlockSteps(r);
     const steps = [];
     const items = r.items.filter(([id]) => EX[id]);
     items.forEach(([id, sets, amt], i) => {
@@ -1383,11 +1450,45 @@
     return { steps, total: items.length };
   }
 
+  /* Movilidad (1 vez cada uno) → Fuerza (series) → Core en circuito (rondas) */
+  function buildBlockSteps(r) {
+    const steps = [];
+    const pushWork = (st, ex) => {
+      if (ex.type === "time" && ex.side) {
+        steps.push({ ...st, side: "Lado derecho" }, { kind: "switch", i: st.i, id: st.id, secs: 5 }, { ...st, side: "Lado izquierdo" });
+      } else steps.push(st);
+    };
+    const rest = (i, secs) => steps.push({ kind: "rest", i, secs });
+    r.sections.forEach((sec) => {
+      const idx = []; for (let i = sec.from; i < sec.to; i++) if (EX[r.items[i][0]]) idx.push(i);
+      if (sec.rounds > 1) {
+        for (let rd = 1; rd <= sec.rounds; rd++) idx.forEach((i, k) => {
+          const [id, , amt] = r.items[i];
+          pushWork({ kind: "work", i, id, set: rd, sets: sec.rounds, amt, round: true, sec: sec.key }, EX[id]);
+          rest(i, k < idx.length - 1 ? 15 : r.rest || 40);
+        });
+      } else idx.forEach((i) => {
+        const [id, sets, amt] = r.items[i];
+        for (let s = 1; s <= sets; s++) {
+          pushWork({ kind: "work", i, id, set: s, sets, amt, sec: sec.key }, EX[id]);
+          rest(i, sec.key === "mov" ? 10 : r.rest || 40);
+        }
+      });
+    });
+    while (steps.length && steps[steps.length - 1].kind === "rest") steps.pop();
+    return { steps, total: r.items.filter(([id]) => EX[id]).length };
+  }
+  function blockLabel(st) {
+    const sec = P.r.sections?.find((x) => x.key === st.sec); if (!sec) return "";
+    const n = sec.to - sec.from, k = st.i - sec.from + 1;
+    return `${BLOCKS[sec.key].emoji} ${BLOCKS[sec.key].name} · ${k} de ${n}`;
+  }
+
   function startWorkout(r) {
     ensureAudio();
     const { steps, total } = buildSteps(r);
     if (!steps.length) { toast("Esta rutina no tiene ejercicios"); return; }
-    P = { r, steps, total, warm: r.warm || 0, idx: -1, start: Date.now(), done: new Set(), t: null, feeling: 3, fig: null };
+    P = { r, steps, total, warm: r.warm || 0, idx: -1, start: Date.now(), done: new Set(), t: null, feeling: 3, fig: null, kg: {} };
     $("#player").hidden = false;
     document.body.classList.add("no-scroll");
     keepAwake(true);
@@ -1427,6 +1528,7 @@
       const amt = ex.type === "time" ? `${st.amt} segundos` : `${st.amt} repeticiones${ex.side ? " con cada lado" : ""}`;
       if (st.side === "Lado izquierdo") speak("Ahora el lado izquierdo.");
       else if (st.set === 1) speak(`${ex.name}. ${amt}.`);
+      else if (st.round) speak(`Ronda ${st.set}. ${ex.name}. ${amt}.`);
       else speak(`Serie ${st.set}. ${amt}.`);
     } else if (st.kind === "rest") {
       const nx = nextWork(idx);
@@ -1508,8 +1610,9 @@
         <div class="p-body">
           <div class="p-label">${st.kind === "switch" ? "Cambia de lado" : "Descansa y respira"}</div>
           ${ringHTML(rem, P.t.total)}
+          ${nx && nx.sec && P.steps[P.idx - 1]?.sec !== nx.sec ? `<div class="p-block-next">Ahora empieza el bloque de <strong>${BLOCKS[nx.sec].emoji} ${BLOCKS[nx.sec].name}</strong></div>` : ""}
           ${nex ? `<div class="p-next">
-            <div class="grow"><div class="small muted" style="font-weight:800">${nx.i === st.i ? `SIGUIENTE: SERIE ${nx.set} DE ${nx.sets}` : "SIGUIENTE EJERCICIO"}</div>
+            <div class="grow"><div class="small muted" style="font-weight:800">${nx.round && nx.set > 1 && nx.i === P.r.sections.find((x) => x.key === nx.sec).from ? `RONDA ${nx.set} DE ${nx.sets}` : nx.i === st.i && !nx.round ? `SIGUIENTE: SERIE ${nx.set} DE ${nx.sets}` : "SIGUIENTE EJERCICIO"}</div>
             <strong>${esc(nex.name)}</strong><div class="small muted">${amountText(nex, nx.amt)}</div></div></div>
             <div id="pFigSlot" class="p-fig-slot small"></div>` : ""}
         </div>
@@ -1522,7 +1625,7 @@
 
     const ex = EX[st.id], z = ZONES[ex.zone];
     const dots = st.sets > 1 ? `<div class="p-set">${Array.from({ length: st.sets }, (_, k) => `<i class="${k + 1 < st.set ? "on" : k + 1 === st.set ? "cur" : ""}"></i>`).join("")}</div>` : "";
-    const setLabel = [st.sets > 1 ? `Serie ${st.set} de ${st.sets}` : "", st.side || ""].filter(Boolean).join(" · ");
+    const setLabel = [st.sets > 1 ? `${st.round ? "Ronda" : "Serie"} ${st.set} de ${st.sets}` : "", st.side || ""].filter(Boolean).join(" · ");
     let main, action;
     if (ex.type === "time") {
       const rem = P.t.running ? P.t.endAt - Date.now() : P.t.remaining;
@@ -1532,13 +1635,14 @@
       main = `<div class="p-big">${st.amt}<small>repeticiones${ex.side ? " con cada lado" : ""}</small></div>`;
       action = `<button class="btn huge block green" data-act="p-next">${ICON.check} ¡Hecho!</button>`;
     }
-    const label = st.i < P.warm ? `Calentamiento ${st.i + 1} de ${P.warm}` : `Ejercicio ${st.i - P.warm + 1} de ${P.total - P.warm}`;
+    const label = st.sec ? blockLabel(st) : st.i < P.warm ? `Calentamiento ${st.i + 1} de ${P.warm}` : `Ejercicio ${st.i - P.warm + 1} de ${P.total - P.warm}`;
     el.innerHTML = `${playerTop(label)}
       <div class="p-body">
         <div id="pFigSlot" class="p-fig-slot"></div>
         <div class="p-name">${esc(ex.name)}</div>
         ${setLabel ? `<div class="p-label">${setLabel}</div>` : ""}
         ${dots}
+        ${usesWeight(ex) ? `<div class="p-kg"><span class="small muted">Peso por mancuerna</span>${kgStepper("p-kg", ex.id, P.kg[ex.id] ?? lastKg(ex.id) ?? 2)}</div>` : ""}
         ${main}
         ${ex.tips?.[0] ? `<p class="p-tip">💡 ${esc(ex.tips[0])}</p>` : ""}
         <button class="link-btn" data-act="p-info">¿Cómo se hace? Ver explicación</button>
@@ -1615,6 +1719,12 @@
       minutes: P.minutes, exercises: Math.max(0, P.done.size - [...P.done].filter((i) => i < P.warm).length), total: P.total - P.warm,
       feeling: P.feeling, note: ($("#pNote")?.value || "").trim(),
     };
+    // pesos usados: los que se han tocado o, si no, el último conocido, en los ejercicios hechos
+    const kgs = {};
+    [...P.done].forEach((i) => { const id = P.r.items[i]?.[0]; if (usesWeight(EX[id])) { const kg = P.kg[id] ?? lastKg(id); if (kg !== undefined) kgs[id] = kg; } });
+    Object.entries(P.kg).forEach(([id, kg]) => { kgs[id] = kg; });
+    Object.entries(kgs).forEach(([id, kg]) => setKg(id, kg));
+    if (Object.keys(kgs).length) rec.weights = kgs;
     db.sessions.push(rec);
     save();
     stopWorkout();
@@ -1658,7 +1768,7 @@
     "f-equip": (el) => { exFilter.equip = el.dataset.v; router(); },
     "copy-routine": (el) => {
       const r = getRoutine(el.dataset.id);
-      B = { id: "c-" + uid(), name: r.name + " (mía)", emoji: r.emoji, color: r.color, rest: r.rest, items: r.items.map((x) => [...x]), custom: true, _draft: true };
+      B = { id: "c-" + uid(), name: r.name + " (mía)", emoji: r.emoji, color: r.color, rest: r.rest, items: r.items.map((x, i) => [x[0], x[1] * roundsOf(r, i), x[2]]), custom: true, _draft: true };
       location.hash = "#/crear";
     },
     "del-routine": (el) => confirmSheet("¿Borrar esta rutina?", "Esta acción no se puede deshacer. Tu diario no se borra.", "Sí, borrar", () => {
@@ -1731,6 +1841,14 @@
     "p-skip": () => skipExercise(),
     "p-toggle": () => toggleTimer(),
     "p-more": () => { P.t.endAt += 15000; P.t.total += 15; updateRing(P.t.endAt - Date.now()); },
+    "p-kg": (el) => {
+      const id = el.dataset.id, kg = kgStep(P.kg[id] ?? lastKg(id) ?? 2, +el.dataset.d);
+      P.kg[id] = kg; $$(`[data-kg="${id}"]`).forEach((o) => (o.textContent = fmtKg(kg)));
+    },
+    "ex-kg": (el) => {
+      const id = el.dataset.id; setKg(id, kgStep(lastKg(id) ?? 2, +el.dataset.d)); save();
+      const card = el.closest(".kg-card"); if (card) card.outerHTML = weightCard(EX[id]);
+    },
     "p-int": (el) => { P.intensity = +el.dataset.v; $$("[data-act='p-int']").forEach((b) => b.classList.toggle("on", b === el)); },
     "p-feel": (el) => { P.feeling = +el.dataset.v; $$("[data-act='p-feel']").forEach((b) => b.classList.toggle("on", b === el)); },
     "p-save": () => saveSession(),
