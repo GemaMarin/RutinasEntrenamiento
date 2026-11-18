@@ -85,12 +85,31 @@
     const diff = Math.round((h[h.length - 1].kg - h[0].kg) * 10) / 10;
     return diff > 0 ? `<span class="kg-up">▲ ${fmtKg(diff)}</span>` : diff < 0 ? `<span class="kg-down">▼ ${fmtKg(-diff)}</span>` : "";
   }
+  /* ----- Editor de peso: se ve el peso con un lápiz; al editar, − / + y ✓ para guardar ----- */
+  const kgDraft = {};   // ejercicios que se están editando → peso provisional
+  const PENCIL = `<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>`;
+  const OK_ICON = `<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`;
+  const X_ICON = `<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>`;
+  function kgControl(id) {
+    if (kgDraft[id] !== undefined) {
+      return `<div class="kg-edit">
+        <span class="stepper kg-step"><button data-act="kg-draft" data-id="${id}" data-d="-0.5" aria-label="Menos peso">−</button><output data-kgd="${id}">${fmtKg(kgDraft[id])}</output><button data-act="kg-draft" data-id="${id}" data-d="0.5" aria-label="Más peso">+</button></span>
+        <button class="kg-ok" data-act="kg-ok" data-id="${id}" aria-label="Guardar peso">${OK_ICON}</button>
+        <button class="kg-x" data-act="kg-cancel" data-id="${id}" aria-label="Cancelar">${X_ICON}</button>
+      </div>`;
+    }
+    const kg = lastKg(id);
+    return kg === undefined
+      ? `<button class="kg-add" data-act="kg-edit" data-id="${id}">＋ Añadir peso</button>`
+      : `<div class="kg-view"><span class="kg-pill">${fmtKg(kg)}</span><button class="kg-pen" data-act="kg-edit" data-id="${id}" aria-label="Cambiar el peso">${PENCIL}</button></div>`;
+  }
   function weightCard(ex) {
     const h = kgHist(ex.id), kg = lastKg(ex.id);
-    return `<div class="section card kg-card">
-      <div class="switch-row"><div><h3 class="card-title" style="margin:0">⚖️ Tu peso</h3>
-        <div class="small muted">${kg === undefined ? "Apunta con cuánto peso lo haces (por mancuerna)." : `Último: ${shortDay(h[h.length - 1].d)} ${kgChange(ex.id)}`}</div></div>
-        ${kg === undefined ? `<button class="btn ghost small" data-act="ex-kg-add" data-id="${ex.id}">+ Poner peso</button>` : kgStepper("ex-kg", ex.id, kg)}</div>
+    return `<div class="section card kg-card" data-kgcard="${ex.id}">
+      <div class="kg-card-top"><div class="grow"><h3 class="card-title" style="margin:0">⚖️ Tu peso</h3>
+        <div class="small muted">${kg === undefined ? "Por mancuerna. Saldrá en tus rutinas." : `Desde el ${shortDay(h[h.length - 1].d)} ${kgChange(ex.id)}`}</div></div>
+        ${kgDraft[ex.id] === undefined ? kgControl(ex.id) : ""}</div>
+      ${kgDraft[ex.id] !== undefined ? kgControl(ex.id) : ""}
       ${h.length > 1 ? `<div class="kg-hist">${h.slice(-6).map((x) => `<span><b>${fmtKg(x.kg)}</b>${shortDay(x.d)}</span>`).join("")}</div>` : ""}
     </div>`;
   }
@@ -98,49 +117,53 @@
   const topSeg = (on) => `<div class="seg top-seg">${[["rutinas", "Rutinas"], ["ejercicios", "Ejercicios"], ["pesos", "⚖️ Pesos"]]
     .map(([k, t]) => `<a href="#/${k}" class="${on === k ? "on" : ""}">${t}</a>`).join("")}</div>`;
 
-  /* Pestaña Pesos: el peso de cada ejercicio con mancuernas */
-  let kgQuery = "";
+  /* Pestaña Pesos */
+  let kgQuery = "", kgFlash = null;
   function kgRow(ex) {
-    const kg = lastKg(ex.id), h = kgHist(ex.id);
-    return `<div class="kg-item" data-kgrow="${ex.id}">
+    const kg = lastKg(ex.id), h = kgHist(ex.id), editing = kgDraft[ex.id] !== undefined;
+    return `<div class="kg-item ${editing ? "editing" : ""} ${kgFlash === ex.id ? "flash" : ""}" data-kgrow="${ex.id}">
       <a class="tile pic" href="#/ejercicio/${ex.id}" style="background:${catOf(ex.zone)?.bg || "var(--surface-2)"}">${mini(ex.id)}</a>
       <div class="grow"><h4>${esc(ex.name)}</h4>
-        <div class="sub">${kg === undefined ? "Sin peso apuntado" : `Desde ${shortDay(h[h.length - 1].d)} ${kgChange(ex.id)}`}</div></div>
-      ${kg === undefined
-        ? `<button class="btn ghost small" data-act="kg-add" data-id="${ex.id}">+ Poner peso</button>`
-        : kgStepper("kg-set", ex.id, kg)}
+        ${editing ? `<div class="sub">Peso por mancuerna</div>` : kg !== undefined ? `<div class="sub">Desde el ${shortDay(h[h.length - 1].d)} ${kgChange(ex.id)}</div>` : ""}</div>
+      ${editing ? "" : kgControl(ex.id)}
+      ${editing ? kgControl(ex.id) : ""}
     </div>`;
   }
-  /* Solo se ven los ejercicios con peso apuntado; los demás se encuentran con el buscador */
+  /* Solo se ven los ejercicios con peso; los demás aparecen al buscar */
   function kgMine() {
-    const withKg = EXERCISES.filter((e) => usesWeight(e) && lastKg(e.id) !== undefined);
+    const withKg = EXERCISES.filter((e) => usesWeight(e) && (lastKg(e.id) !== undefined));
     return withKg.length
-      ? `<h3 class="section-title">Tus pesos</h3><div class="kg-items">${withKg.map(kgRow).join("")}</div>`
-      : `<div class="empty kg-empty"><div class="big">⚖️</div><p><strong>Todavía no has añadido ningún peso.</strong><br>Busca un ejercicio arriba y pulsa «+ Poner peso».</p></div>`;
+      ? `<h3 class="section-title">Tus pesos <span class="count">${withKg.length}</span></h3><div class="kg-items">${withKg.map(kgRow).join("")}</div>`
+      : `<div class="empty kg-empty"><div class="big">⚖️</div><p><strong>Todavía no has añadido ningún peso.</strong><br>Busca un ejercicio arriba para añadirlo.</p></div>`;
   }
   function kgSearchResults(qRaw) {
     const q = norm(qRaw.trim());
     if (!q) return "";
-    const res = EXERCISES.filter((e) => usesWeight(e) && norm(e.name).includes(q));
+    const res = EXERCISES.filter((e) => usesWeight(e) && norm(e.name).includes(q)).slice(0, 8);
     return res.length
       ? `<div class="kg-items">${res.map(kgRow).join("")}</div>`
       : `<p class="muted" style="margin:6px 2px">No hay ningún ejercicio con mancuernas con ese nombre.</p>`;
   }
+  function refreshKg(id) {
+    $$(`[data-kgrow="${id}"]`).forEach((r) => { r.outerHTML = kgRow(EX[id]); });
+    $$(`[data-kgcard="${id}"]`).forEach((c) => { c.outerHTML = weightCard(EX[id]); });
+  }
   function viewWeights() {
-    kgQuery = "";
+    kgQuery = ""; Object.keys(kgDraft).forEach((k) => delete kgDraft[k]);
     return {
       title: "Entrenar",
       html: `
         ${topSeg("pesos")}
         <p class="muted" style="margin:4px 2px 12px">Apunta con cuánto peso haces cada ejercicio (por mancuerna). Al hacer una rutina saldrá ese peso.</p>
-        <input class="search" type="search" id="kgSearch" placeholder="Buscar ejercicio…" autocomplete="off" />
-        <div id="kgResults" class="section" hidden></div>
+        <div class="kg-search"><input class="search" type="search" id="kgSearch" placeholder="Buscar ejercicio para añadir…" autocomplete="off" /></div>
+        <div id="kgResults" class="section kg-results" hidden></div>
         <div id="kgMine" class="section">${kgMine()}</div>`,
       after() {
         $("#kgSearch").addEventListener("input", (e) => {
           kgQuery = e.target.value;
-          const box = $("#kgResults"); box.innerHTML = kgSearchResults(kgQuery); box.hidden = !kgQuery.trim();
-          $("#kgMine").hidden = !!kgQuery.trim();
+          const on = !!kgQuery.trim();
+          const box = $("#kgResults"); box.innerHTML = kgSearchResults(kgQuery); box.hidden = !on;
+          $("#kgMine").hidden = on;
         });
       },
     };
@@ -1931,28 +1954,27 @@
       P.kg[id] = kg; $$(`[data-kg="${id}"]`).forEach((o) => (o.textContent = fmtKg(kg)));
     },
     "p-kg-add": (el) => { P.kg[el.dataset.id] = 2; renderPlayer(); },
-    "ex-kg-add": (el) => {
-      const before = earnedIds();
-      setKg(el.dataset.id, 2); save(); const c = el.closest(".kg-card"); if (c) c.outerHTML = weightCard(EX[el.dataset.id]);
-      celebrateNew(before);
+    "kg-edit": (el) => {
+      const id = el.dataset.id; kgDraft[id] = lastKg(id) ?? 2; refreshKg(id);
     },
-    "kg-add": (el) => {
-      const before = earnedIds();
-      setKg(el.dataset.id, 2); save(); const row = el.closest("[data-kgrow]"); if (row) row.outerHTML = kgRow(EX[el.dataset.id]);
-      if ($("#kgMine")) $("#kgMine").innerHTML = kgMine();
-      toast("Peso añadido ✓");
-      celebrateNew(before);
+    "kg-draft": (el) => {
+      const id = el.dataset.id; kgDraft[id] = kgStep(kgDraft[id] ?? 2, +el.dataset.d);
+      $$(`[data-kgd="${id}"]`).forEach((o) => { o.textContent = fmtKg(kgDraft[id]); o.classList.remove("bump"); void o.offsetWidth; o.classList.add("bump"); });
     },
-    "kg-set": (el) => {
-      const before = earnedIds();
-      const id = el.dataset.id; setKg(id, kgStep(lastKg(id), +el.dataset.d)); save();
-      $$(`[data-kgrow="${id}"]`).forEach((row) => { row.outerHTML = kgRow(EX[id]); });
-      celebrateNew(before);
-    },
-    "ex-kg": (el) => {
-      const before = earnedIds();
-      const id = el.dataset.id; setKg(id, kgStep(lastKg(id) ?? 2, +el.dataset.d)); save();
-      const card = el.closest(".kg-card"); if (card) card.outerHTML = weightCard(EX[id]);
+    "kg-cancel": (el) => { const id = el.dataset.id; delete kgDraft[id]; refreshKg(id); },
+    "kg-ok": (el) => {
+      const id = el.dataset.id, kg = kgDraft[id]; delete kgDraft[id];
+      const before = earnedIds(), isNew = lastKg(id) === undefined;
+      setKg(id, kg); save();
+      toast(`✓ ${fmtKg(kg)} guardado`);
+      const search = $("#kgSearch");
+      if (search && search.value.trim()) {
+        // vuelve a la lista con el ejercicio ya puesto y resaltado
+        search.value = ""; kgQuery = ""; $("#kgResults").hidden = true; $("#kgResults").innerHTML = "";
+      }
+      kgFlash = id;
+      if ($("#kgMine")) { $("#kgMine").hidden = false; $("#kgMine").innerHTML = kgMine(); $(`#kgMine [data-kgrow="${id}"]`)?.scrollIntoView({ block: "center", behavior: "smooth" }); }
+      refreshKg(id); kgFlash = null;
       celebrateNew(before);
     },
     "p-int": (el) => { P.intensity = +el.dataset.v; $$("[data-act='p-int']").forEach((b) => b.classList.toggle("on", b === el)); },
