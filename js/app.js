@@ -45,6 +45,8 @@
     sessions: [], custom: [], videos: {}, favs: [], weights: {},
   };
   let db = load();
+  // pide al navegador que no borre los datos por su cuenta (falta de espacio, limpieza automática)
+  try { navigator.storage?.persist?.().catch(() => {}); } catch (e) { /* navegador antiguo */ }
   function load() {
     try {
       const d = JSON.parse(localStorage.getItem(KEY));
